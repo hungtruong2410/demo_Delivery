@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin • Products</title>
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="body-fixed">
+<header class="site-header">
+  <div class="container d-flex justify-content-between align-items-center py-3">
+    <a href="/adminHomepage"><img src="/images/logo.png" width="140" alt="Logo"></a>
+    <div>
+      <a href="/adminHomepage" class="btn btn-outline-secondary btn-sm">← Back</a>
+      <a href="/logout" class="btn btn-outline-dark btn-sm">Logout</a>
+    </div>
+  </div>
+</header>
+
+<main class="container my-4">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+    <div>
+      <h2 class="mb-1">Products</h2>
+      <small class="text-muted">View only • delete is on <a href="/admin_deleteFood">Delete page</a>.</small>
+    </div>
+    <div class="ms-auto" style="max-width:320px">
+      <input id="searchInput" type="search" class="form-control" placeholder="Search by name / category / type">
+    </div>
+  </div>
+
+  <div class="table-responsive mt-3">
+    <table id="productsTable" class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th style="width:70px;">Image</th>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Category</th>
+          <th class="text-end" style="width:110px;">Price</th>
+          <th class="text-center" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (items && items.length) { %>
+          <% for (let i = 0; i < items.length; i++) { const it = items[i]; %>
+            <tr>
+              <td><img src="/images/dish/<%= it.item_img %>" alt="<%= it.item_name %>" style="height:48px;object-fit:cover;"></td>
+              <td class="name"><%= it.item_name %></td>
+              <td class="type"><%= it.item_type %></td>
+              <td class="category"><%= it.item_category %></td>
+              <td class="text-end">₹ <%= it.item_price %></td>
+              <td class="text-center">
+                <a class="btn btn-sm btn-primary" href="/admin_products/<%= it.item_id %>">Update</a>
+              </td>
+            </tr>
+          <% } %>
+        <% } else { %>
+          <tr><td colspan="6" class="text-center text-muted py-4">No items</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  const q = document.getElementById('searchInput');
+  const rows = [...document.querySelectorAll('#productsTable tbody tr')];
+  q?.addEventListener('input', () => {
+    const term = q.value.toLowerCase();
+    rows.forEach(tr => {
+      const name = tr.querySelector('.name')?.textContent.toLowerCase() || '';
+      const type = tr.querySelector('.type')?.textContent.toLowerCase() || '';
+      const cat  = tr.querySelector('.category')?.textContent.toLowerCase() || '';
+      tr.style.display = (name.includes(term) || type.includes(term) || cat.includes(term)) ? '' : 'none';
+    });
+  });
+</script>
+</body>
+</html>

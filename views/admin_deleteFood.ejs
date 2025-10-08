@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delete Food - Admin</title>
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="body-fixed">
+
+  <header class="site-header">
+    <!-- tuỳ bạn giữ header giống adminHomepage -->
+  </header>
+
+  <main class="container mt-5">
+    <h3 class="mb-3">Delete Food</h3>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th style="width:70px;">Image</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th class="text-end" style="width:100px;">Price</th>
+            <th class="text-center" style="width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (items && items.length) { %>
+            <% for (let i = 0; i < items.length; i++) { %>
+              <tr>
+                <td>
+                  <img src="/images/dish/<%= items[i].item_img %>" alt="<%= items[i].item_name %>" style="height:48px;object-fit:cover;">
+                </td>
+                <td><%= items[i].item_name %></td>
+                <td><%= items[i].item_type %></td>
+                <td><%= items[i].item_category %></td>
+                <td class="text-end"><%= items[i].item_price %></td>
+                <td class="text-center">
+                  <form action="/admin_deleteFood/<%= items[i].item_id %>" method="POST"
+                        onsubmit="return confirm('Xóa món này? Hành động không thể hoàn tác.')" style="display:inline">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            <% } %>
+          <% } else { %>
+            <tr><td colspan="6" class="text-center text-muted">No items</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <a class="btn btn-secondary mt-3" href="/adminHomepage">← Back</a>
+  </main>
+
+  <script src="/javascripts/bootstrap.min.js"></script>
+</body>
+</html>

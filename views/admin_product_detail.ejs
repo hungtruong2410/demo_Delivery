@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Product Detail</title>
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <style>
+    .container{max-width:900px;margin-top:24px}
+    .hero{height:220px;object-fit:cover;border-radius:8px}
+    dt{width:160px}
+  </style>
+</head>
+<body class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Product Detail</h3>
+    <div>
+      <a href="/admin_products" class="btn btn-secondary btn-sm">Back</a>
+      <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+    </div>
+  </div>
+
+  <% if (item) { %>
+    <img class="hero mb-3" src="/images/dish/<%= item.item_img %>" alt="<%= item.item_name %>">
+
+    <dl class="row">
+      <dt class="col-sm-3">Name</dt><dd class="col-sm-9"><%= item.item_name %></dd>
+      <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><%= item.item_type %></dd>
+      <dt class="col-sm-3">Category</dt><dd class="col-sm-9"><%= item.item_category %></dd>
+      <dt class="col-sm-3">Serving</dt><dd class="col-sm-9"><%= item.item_serving %></dd>
+      <dt class="col-sm-3">Calories</dt><dd class="col-sm-9"><%= item.item_calories %></dd>
+      <dt class="col-sm-3">Price</dt><dd class="col-sm-9"><%= item.item_price %></dd>
+      <dt class="col-sm-3">Rating</dt><dd class="col-sm-9"><%= item.item_rating %></dd>
+      <dt class="col-sm-3">Image file</dt><dd class="col-sm-9"><%= item.item_img %></dd>
+    </dl>
+
+    <a class="btn btn-primary" href="/admin_products/<%= item.item_id %>/edit">Edit</a>
+  <% } else { %>
+    <div class="alert alert-warning">Product not found.</div>
+  <% } %>
+</body>
+</html>
