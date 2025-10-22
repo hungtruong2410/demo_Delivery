@@ -6,9 +6,11 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "body-parser": "^1.20.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
+    "dotenv": "^17.2.3",
     "ejs": "~2.6.1",
     "express": "~4.16.1",
     "express-fileupload": "^1.4.0",
