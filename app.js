@@ -43,10 +43,9 @@ app.use('/', adminRoutes);  // Gắn tất cả route cho admin
 // Export app (cho server.js hoặc test)
 module.exports = app;
 
-/*
+
 // Nếu bạn dùng file này để chạy server (ví dụ `node app.js`)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });
-*/

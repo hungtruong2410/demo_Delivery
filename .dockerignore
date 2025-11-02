@@ -1,0 +1,4 @@
+# Bỏ qua các file này khi build image
+node_modules
+.git
+.env
