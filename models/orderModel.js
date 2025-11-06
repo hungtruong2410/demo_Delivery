@@ -3,69 +3,79 @@ const db = require('../db');
 
 module.exports = {
   // Thêm đơn hàng mới
-  async createOrder({ user_id, status = 'pending', total_amount = 0, address = null, notes = null }, conn = db) {
-    const sql = `
-      INSERT INTO orders (user_id, status, total_amount, address, notes)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-    const result = await conn.query(sql, [user_id, status, total_amount, address, notes]);
-    return { order_id: result.insertId, user_id, status, total_amount, address, notes };
-  },
-
-  // Cập nhật tổng tiền + trạng thái
-  async updateOrderTotals(order_id, { total_amount, status }, conn = db) {
-    const sql = `UPDATE orders SET total_amount = ?, status = ? WHERE order_id = ?`;
-    await conn.query(sql, [total_amount, status, order_id]);
-    return this.findById(order_id, conn);
+  createOrder({ order_id, user_id, item_id, quantity, price, datetime }, conn = db) {
+    return new Promise((resolve, reject) => {
+      // Sửa: Thêm cột status như chúng ta đã định nghĩa
+      const sql = `
+        INSERT INTO orders (order_id, user_id, item_id, quantity, price, datetime, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'Đang xử lý')
+      `;
+      conn.query(sql, [order_id, user_id, item_id, quantity, price, datetime], (error, result) => {
+        if (error) return reject(error);
+        resolve({ order_id: result.insertId });
+      });
+    });
   },
 
   // Lấy đơn hàng theo ID
-  async findById(order_id, conn = db) {
-    const sql = `SELECT * FROM orders WHERE order_id = ?`;
-    const rows = await conn.query(sql, [order_id]);
-    return rows[0] || null;
-  },
-
-  // Lấy đơn hàng kèm chi tiết món
-  async findWithItems(order_id) {
-    const sql = `
-      SELECT o.*, oi.id AS order_item_id, oi.food_id, oi.quantity, oi.line_total,
-             m.item_name AS food_name, m.item_price AS food_price, m.item_img AS image_url
-      FROM orders o
-      LEFT JOIN order_items oi ON oi.order_id = o.order_id
-      LEFT JOIN menu m ON m.item_id = oi.food_id
-      WHERE o.order_id = ?
-    `;
-    return db.query(sql, [order_id]);
+  findById(order_id, conn = db) {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT * FROM orders WHERE order_id = ?`;
+      conn.query(sql, [order_id], (error, rows) => {
+        if (error) return reject(error);
+        resolve(rows[0] || null);
+      });
+    });
   },
 
   // Lấy toàn bộ đơn hàng
-  async getAllOrders() {
-    const sql = 'SELECT * FROM orders ORDER BY datetime';
-    return db.query(sql);
+  getAllOrders() {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM orders ORDER BY datetime DESC'; // Đã sửa DESC
+      db.query(sql, (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      });
+    });
   },
 
-  // Lấy đơn hàng cụ thể (để dispatch)
-  async getById(order_id) {
-    const sql = 'SELECT * FROM orders WHERE order_id = ?';
-    const rows = await db.query(sql, [order_id]);
-    return rows[0] || null;
+  // Lấy các đơn hàng theo một trạng thái cụ thể
+  getOrdersByStatus(status) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM orders WHERE status = ? ORDER BY datetime ASC';
+      db.query(sql, [status], (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      });
+    });
   },
 
-  // Thêm bản ghi vào order_dispatch
-  async insertDispatch({ order_id, user_id, item_id, quantity, price, datetime }) {
-    const sql = `
-      INSERT INTO order_dispatch (order_id, user_id, item_id, quantity, price, datetime)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-    await db.query(sql, [order_id, user_id, item_id, quantity, price, datetime]);
-    return true;
+  // Cập nhật trạng thái của một đơn hàng
+  updateStatus(order_id, new_status) {
+    return new Promise((resolve, reject) => {
+      const sql = 'UPDATE orders SET status = ? WHERE order_id = ?';
+      db.query(sql, [new_status, order_id], (error) => {
+        if (error) return reject(error);
+        resolve(true);
+      });
+    });
   },
 
-  // Xoá đơn hàng sau khi dispatch
-  async deleteOrder(order_id) {
-    const sql = 'DELETE FROM orders WHERE order_id = ?';
-    await db.query(sql, [order_id]);
-    return true;
+  // Lấy lịch sử đơn hàng của User (kèm chi tiết món)
+  getUserOrderHistory(user_id) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT o.order_id, o.user_id, o.quantity, o.price, o.datetime, o.status,
+               m.item_id, m.item_name, m.item_img 
+        FROM orders o
+        JOIN menu m ON m.item_id = o.item_id
+        WHERE o.user_id = ?
+        ORDER BY o.datetime DESC
+      `;
+      db.query(sql, [user_id], (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      });
+    });
   }
 };
