@@ -15,7 +15,13 @@ exports.adminSignIn = async (req, res) => {
   if (!admin) return res.render('admin_signin');
   res.cookie('cookuid', admin.admin_id);
   res.cookie('cookuname', admin.admin_name);
-  res.cookie('is_admin', '1');
+  res.cookie('is_admin', '1', {
+  path: '/',          // ✅ QUAN TRỌNG: cookie gửi cho mọi URL (Home / Dashboard / v.v.)
+  httpOnly: true,     // an toàn hơn; nếu cần debug JS đọc được thì tạm để false
+  sameSite: 'lax',
+  // secure: true,    // bật khi dùng HTTPS
+  maxAge: 24 * 60 * 60 * 1000
+});
   return res.redirect('/adminHomepage');
 };
 

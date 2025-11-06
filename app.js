@@ -18,6 +18,7 @@ const app = express();
 
 // Set View Engine and Middleware
 app.set("view engine", "ejs");
+app.set('views', path.join(__dirname, 'views'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public"))); // <-- Dùng path.join cho an toàn
 app.use(express.json());

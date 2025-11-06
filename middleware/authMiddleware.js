@@ -1,9 +1,16 @@
 function requireAdmin(req, res, next) {
-  // chỉ cho admin (cookie is_admin=1) được gọi các route admin-protected
-  if (req.cookies?.is_admin !== "1") {
-    return res.status(403).send("Forbidden: Admin only");
+  // Ưu tiên session nếu bạn có gắn khi đăng nhập
+  const roleFromSession = req.session?.user?.role || req.user?.role;
+
+  // Cookie DEV/test
+  const isAdminCookie = req.cookies?.is_admin === '1';   // <-- tên cookie bạn đang dùng
+
+  if (roleFromSession === 'admin' || isAdminCookie) {
+    return next();
   }
-  next();
-}module.exports = {
-  requireAdmin
-};
+
+  // Đổi thành redirect thay vì send thuần, UX tốt hơn
+  return res.status(403).redirect('/admin_signin');
+}
+
+module.exports = { requireAdmin };

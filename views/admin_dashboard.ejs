@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= pageTitle || 'Admin Dashboard' %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- CSS giống project -->
+  <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+<body class="body-fixed">
+
+<header class="site-header">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-2">
+        <a href="/adminHomepage"><img src="/images/logo.png" width="160" height="36" alt="Logo"></a>
+      </div>
+      <div class="col-lg-10 d-flex justify-content-between">
+        <nav>
+          <ul class="menu food-nav-menu d-flex gap-3" style="list-style:none;margin:0;padding:0;">
+            <li><a href="/adminHomepage">Home</a></li>
+            <li><a href="/admin_dashboard" class="fw-bold">Dashboard</a></li>
+          </ul>
+        </nav>
+        <div><a class="btn btn-sm btn-outline-secondary" href="/logout">Logout</a></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container my-4">
+  <h1 class="mb-3">Admin Dashboard</h1>
+
+  <form id="filterForm" class="row g-2 mb-4">
+    <div class="col-auto">
+      <input type="date" class="form-control" id="from" value="<%= from %>">
+    </div>
+    <div class="col-auto">
+      <input type="date" class="form-control" id="to" value="<%= to %>">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary" type="submit">Áp dụng</button>
+    </div>
+  </form>
+
+  <div class="row g-3" id="kpiCards">
+    <div class="col-md-3"><div class="card p-3"><small>Doanh thu hôm nay</small><h3 id="todayRevenue">—</h3></div></div>
+    <div class="col-md-3"><div class="card p-3"><small>Doanh thu tháng</small><h3 id="monthRevenue">—</h3></div></div>
+    <div class="col-md-3"><div class="card p-3"><small>Đơn hôm nay</small><h3 id="todayOrders">—</h3></div></div>
+    <div class="col-md-3"><div class="card p-3"><small>AOV</small><h3 id="aov">—</h3></div></div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-8">
+      <div class="card p-3">
+        <h6 class="mb-3">Doanh thu theo ngày</h6>
+        <canvas id="revChart" height="120"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card p-3">
+        <h6 class="mb-3">Đơn theo trạng thái</h6>
+        <canvas id="statusChart" height="120"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card p-3 mt-3">
+    <h6 class="mb-3">Top món bán chạy (7 ngày)</h6>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>#</th><th>Món</th><th>Số lượng</th><th>Doanh thu</th></tr></thead>
+        <tbody id="topDishesBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer mt-5">
+  <div class="bottom-footer">
+    <div class="container text-center">
+      <p class="m-0">© <%= new Date().getFullYear() %> Hungry To Eat</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+async function fetchMetrics(params){
+  const url = new URL(window.location.origin + '/admin_dashboard/metrics');
+  url.search = new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  return res.json();
+}
+function formatVND(n){ try { return Number(n).toLocaleString('vi-VN',{style:'currency',currency:'VND'});} catch { return n; } }
+
+let revChart, statusChart;
+
+function renderKPIs(k){
+  document.getElementById('todayRevenue').textContent = formatVND(k.todayRevenue);
+  document.getElementById('monthRevenue').textContent = formatVND(k.monthRevenue);
+  document.getElementById('todayOrders').textContent  = k.todayOrders;
+  document.getElementById('aov').textContent          = formatVND(k.aov);
+}
+
+function renderRevChart(rows){
+  const labels = rows.map(r => r.day);
+  const values = rows.map(r => r.revenue);
+  if (revChart) revChart.destroy();
+  revChart = new Chart(document.getElementById('revChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Doanh thu', data: values, tension: 0.3, fill: false }] },
+    options: { responsive: true, plugins: { legend: { display: true } } }
+  });
+}
+
+function renderStatusChart(rows){
+  const labels = rows.map(r => r.status);
+  const values = rows.map(r => r.count);
+  if (statusChart) statusChart.destroy();
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Số đơn', data: values }] },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+}
+
+function renderTopDishes(rows){
+  document.getElementById('topDishesBody').innerHTML = rows.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${r.dish_name}</td>
+      <td>${r.qty}</td>
+      <td>${formatVND(r.revenue)}</td>
+    </tr>`).join('');
+}
+
+async function load(){
+  const from = document.getElementById('from').value;
+  const to   = document.getElementById('to').value;
+  const data = await fetchMetrics({ from, to });
+  renderKPIs(data.kpis);
+  renderRevChart(data.charts.dailyRevenue);
+  renderStatusChart(data.charts.byStatus);
+  renderTopDishes(data.tables.topDishes);
+}
+
+document.getElementById('filterForm').addEventListener('submit', e => { e.preventDefault(); load(); });
+window.addEventListener('DOMContentLoaded', load);
+</script>
+</body>
+</html>
