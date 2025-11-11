@@ -1,102 +1,160 @@
 // controllers/adminDashboard.controller.js
-const pool = require('../db'); // repo của bạn có sẵn db.js ở root
+const db = require('../db');
+const dayjs = require('dayjs');
 
+// --- helpers ---
 function defaultRange() {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(to.getDate() - 29);
-  const pad = (n) => String(n).padStart(2, '0');
-  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  return { from: fmt(from), to: fmt(to) };
+  const to = dayjs().format('YYYY-MM-DD');
+  const from = dayjs().startOf('month').format('YYYY-MM-DD');
+  return { from, to };
+}
+function parseRange(qs) {
+  const { from, to } = qs || {};
+  const okFrom = dayjs(from, 'YYYY-MM-DD', true).isValid() ? from : null;
+  const okTo   = dayjs(to,   'YYYY-MM-DD', true).isValid() ? to   : null;
+  return (okFrom && okTo) ? { from: okFrom, to: okTo } : defaultRange();
 }
 
-exports.renderDashboard = async (req, res) => {
-  const { from, to } = { ...defaultRange(), ...req.query };
-  res.render('admin_dashboard', { pageTitle: 'Admin Dashboard', from, to });
+// ---- pages ----
+exports.renderDashboard = (req, res) => {
+  const { from, to } = defaultRange();
+  return res.render('admin_dashboard', {
+    pageTitle: 'Admin Dashboard',
+    from,
+    to
+  });
 };
 
+// ---- API /admin_dashboard/metrics ----
 exports.getMetrics = async (req, res) => {
-  const { from, to } = (req.query.from && req.query.to) ? req.query : defaultRange();
-
-  const conn = await pool.getConnection();
+  const conn = db.promise();
   try {
-    // Giả định bảng: orders(id, user_id, total_amount, status, created_at)
-    // order_items(id, order_id, dish_id, quantity, price)
-    // dishes(id, name)
-    const [[todayRevenue]] = await conn.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS value
-       FROM orders WHERE DATE(created_at)=CURDATE() AND status IN ('paid','completed')`
+    console.log('[dashboard.getMetrics] v3 loaded');
+
+    const { from, to } = parseRange(req.query);
+    const fromDT = `${from} 00:00:00`;
+    const toDT   = `${to} 23:59:59`;
+    const today  = dayjs().format('YYYY-MM-DD');
+    const monthStart = dayjs().startOf('month').format('YYYY-MM-DD');
+
+    // --- Kiểm tra schema: orders có cột status không? ---
+    const [cols] = await conn.query('SHOW COLUMNS FROM orders');
+    const hasStatus = cols.some(c => c.Field === 'status');
+    console.log('[dashboard.getMetrics] orders.status exists?', hasStatus);
+
+    // Nguồn dữ liệu: gộp 2 bảng (đúng với DB của bạn)
+    const unionSQL = `
+      SELECT order_id, user_id, item_id, quantity, price, datetime FROM orders
+      UNION ALL
+      SELECT order_id, user_id, item_id, quantity, price, datetime FROM order_dispatch
+    `;
+
+    // --- KPI ---
+    const [[todayRev]] = await conn.query(
+      `SELECT COALESCE(SUM(price),0) AS v FROM (${unionSQL}) x WHERE DATE(datetime)=?`, [today]
+    );
+    const [[monthRev]] = await conn.query(
+      `SELECT COALESCE(SUM(price),0) AS v FROM (${unionSQL}) x WHERE datetime BETWEEN ? AND ?`,
+      [`${monthStart} 00:00:00`, `${today} 23:59:59`]
+    );
+    const [[todayCnt]] = await conn.query(
+      `SELECT COUNT(*) AS v FROM (${unionSQL}) x WHERE DATE(datetime)=?`, [today]
+    );
+    const [[aovRow]] = await conn.query(
+      `SELECT COALESCE(SUM(price),0) AS rev, COUNT(*) AS cnt
+       FROM (${unionSQL}) x
+       WHERE datetime BETWEEN ? AND ?`,
+      [fromDT, toDT]
+    );
+    const aov = aovRow.cnt ? Math.round((aovRow.rev / aovRow.cnt) * 100) / 100 : 0;
+
+    // --- Doanh thu theo ngày ---
+    const [dailyRows] = await conn.query(
+      `SELECT DATE(datetime) AS day, COALESCE(SUM(price),0) AS revenue
+       FROM (${unionSQL}) x
+       WHERE datetime BETWEEN ? AND ?
+       GROUP BY DATE(datetime)
+       ORDER BY DATE(datetime)`,
+      [fromDT, toDT]
     );
 
-    const [[monthRevenue]] = await conn.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS value
-       FROM orders 
-       WHERE DATE_FORMAT(created_at,'%Y-%m')=DATE_FORMAT(CURDATE(),'%Y-%m')
-         AND status IN ('paid','completed')`
-    );
+    // --- Đơn theo trạng thái ---
+    // Nếu có cột status (ít gặp), dùng trực tiếp; nếu KHÔNG có, tự dựng 2 nhóm pending/dispatched
+    let byStatusRows;
+    if (hasStatus) {
+      const [rows] = await conn.query(
+        `SELECT status, COUNT(*) AS count
+         FROM orders
+         WHERE datetime BETWEEN ? AND ?
+         GROUP BY status
+         UNION ALL
+         SELECT 'dispatched' AS status, COUNT(*) AS count
+         FROM order_dispatch
+         WHERE datetime BETWEEN ? AND ?`,
+        [fromDT, toDT, fromDT, toDT]
+      );
+      byStatusRows = rows;
+    } else {
+      const [rows] = await conn.query(
+        `SELECT 'pending' AS status,   COUNT(*) AS count FROM orders
+           WHERE datetime BETWEEN ? AND ?
+         UNION ALL
+         SELECT 'dispatched' AS status, COUNT(*) AS count FROM order_dispatch
+           WHERE datetime BETWEEN ? AND ?`,
+        [fromDT, toDT, fromDT, toDT]
+      );
+      byStatusRows = rows;
+    }
 
-    const [[todayOrders]] = await conn.query(
-      `SELECT COUNT(*) AS value FROM orders WHERE DATE(created_at)=CURDATE()`
-    );
-
-    const [[aov]] = await conn.query(
-      `SELECT COALESCE(AVG(total_amount),0) AS value
-       FROM orders
-       WHERE created_at BETWEEN ? AND ? AND status IN ('paid','completed')`,
-      [`${from} 00:00:00`, `${to} 23:59:59`]
-    );
-
-    const [[activeUsers]] = await conn.query(
-      `SELECT COUNT(DISTINCT user_id) AS value
-       FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)`
-    );
-
-    const [dailyRevenue] = await conn.query(
-      `SELECT DATE(created_at) AS day, COALESCE(SUM(total_amount),0) AS revenue
-       FROM orders
-       WHERE created_at BETWEEN ? AND ? AND status IN ('paid','completed')
-       GROUP BY DATE(created_at)
-       ORDER BY DATE(created_at) ASC`,
-      [`${from} 00:00:00`, `${to} 23:59:59`]
-    );
-
-    const [byStatus] = await conn.query(
-      `SELECT status, COUNT(*) AS count
-       FROM orders
-       WHERE created_at BETWEEN ? AND ?
-       GROUP BY status`,
-      [`${from} 00:00:00`, `${to} 23:59:59`]
-    );
-
-    const [topDishes] = await conn.query(
-      `SELECT oi.dish_id, d.name AS dish_name,
-              SUM(oi.quantity) AS qty, SUM(oi.quantity * oi.price) AS revenue
-       FROM order_items oi
-       JOIN orders o ON o.id = oi.order_id
-       JOIN dishes d ON d.id = oi.dish_id
-       WHERE o.created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-         AND o.status IN ('paid','completed')
-       GROUP BY oi.dish_id, d.name
+    // --- Top món 7 ngày gần nhất ---
+    const sevenAgo = dayjs(to).subtract(6, 'day').format('YYYY-MM-DD') + ' 00:00:00';
+    const [topRows] = await conn.query(
+      `SELECT item_id, SUM(quantity) AS qty, SUM(price) AS revenue
+       FROM (${unionSQL}) x
+       WHERE datetime BETWEEN ? AND ?
+       GROUP BY item_id
        ORDER BY qty DESC
-       LIMIT 10`
+       LIMIT 10`,
+      [sevenAgo, `${to} 23:59:59`]
     );
 
-    res.json({
+    // Map tên món (optional)
+    const menuMap = new Map();
+    try {
+      const [menu] = await conn.query('SELECT item_id, item_name FROM menu');
+      for (const m of menu) menuMap.set(m.item_id, m.item_name);
+    } catch {}
+
+    return res.json({
       range: { from, to },
       kpis: {
-        todayRevenue: Number(todayRevenue.value),
-        monthRevenue: Number(monthRevenue.value),
-        todayOrders: Number(todayOrders.value),
-        aov: Number(aov.value),
-        activeUsers: Number(activeUsers.value),
+        todayRevenue: Number(todayRev?.v) || 0,
+        monthRevenue: Number(monthRev?.v) || 0,
+        todayOrders : Number(todayCnt?.v) || 0,
+        aov
       },
-      charts: { dailyRevenue, byStatus },
-      tables: { topDishes }
+      charts: {
+        dailyRevenue: dailyRows.map(r => ({
+          day: dayjs(r.day).format('YYYY-MM-DD'),
+          revenue: Number(r.revenue) || 0
+        })),
+        byStatus: byStatusRows.map(r => ({
+          status: r.status,
+          count: Number(r.count) || 0
+        }))
+      },
+      tables: {
+        topDishes: topRows.map((r, i) => ({
+          rank: i + 1,
+          item_id: r.item_id,
+          dish_name: menuMap.get(r.item_id) || `Item #${r.item_id}`,
+          qty: Number(r.qty) || 0,
+          revenue: Number(r.revenue) || 0
+        }))
+      }
     });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Server error' });
-  } finally {
-    conn.release();
+  } catch (err) {
+    console.error('[DASHBOARD_METRICS]', err);
+    return res.status(500).json({ error: 'Server error' });
   }
 };

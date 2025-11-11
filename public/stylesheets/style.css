@@ -573,6 +573,43 @@ input * {
     }
 }
 
+/* ------------------------------------------------------------------ */
+/* Admin dashboard: ensure header stays visible when scrolling          */
+/* ------------------------------------------------------------------ */
+/* Keep header pinned to top (use sticky for best behavior inside flow) */
+
+/* Some pages use `.body-fixed` which sets the BODY to position: fixed.
+   That prevents normal page scrolling. For the admin dashboard we want
+   the page to scroll while the header stays fixed on top. Undo the
+   body-fixed effect only for pages that include `.has-sticky-header`. */
+.has-sticky-header.body-fixed {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* Make header truly fixed at the top so it doesn't move on scroll */
+.site-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1030 !important;
+    background: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+}
+
+/* Add page-specific top padding so content isn't hidden under header */
+.has-sticky-header {
+    padding-top: 92px; /* adjust if header height changes */
+}
+
+@media (max-width: 767px) {
+    .has-sticky-header { padding-top: 76px; }
+}
+
+
 /* Banner and header section designing ends */
 /* About Section starts */
 

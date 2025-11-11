@@ -39,7 +39,14 @@ app.use((req, res, next) => {
 // Gắn (Mount) các routers
 app.use('/', indexRoutes);  // Gắn route cho trang chủ
 app.use('/', userRoutes);   // Gắn tất cả route cho user
-app.use('/', adminRoutes);  // Gắn tất cả route cho admin
+app.use('/admin', adminRoutes);  // Gắn tất cả route cho admin
+
+// Shortcuts: ai gõ nhầm URL cũ thì redirect sang URL đúng có /admin
+app.get('/admin_signin',            (req, res) => res.redirect('/admin/admin_signin'));
+app.get('/adminHomepage',           (req, res) => res.redirect('/admin/adminHomepage'));
+app.get('/admin_view_dispatch_orders', (req, res) => res.redirect('/admin/admin_view_dispatch_orders'));
+app.get('/admin_dashboard',         (req, res) => res.redirect('/admin/admin_dashboard'));
+app.get('/admin_dashboard/metrics', (req, res) => res.redirect('/admin/admin_dashboard/metrics'));
 
 // Export app (cho server.js hoặc test)
 module.exports = app;

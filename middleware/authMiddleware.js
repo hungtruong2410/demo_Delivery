@@ -10,7 +10,7 @@ function requireAdmin(req, res, next) {
   }
 
   // Đổi thành redirect thay vì send thuần, UX tốt hơn
-  return res.status(403).redirect('/admin_signin');
+  return res.status(403).redirect('/admin/admin_signin');
 }
 
 module.exports = { requireAdmin };
