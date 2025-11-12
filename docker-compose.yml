@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: foodorderingwesitedb
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [foodnet]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy   # CHỜ DB sẵn sàng
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: secret
+      DB_NAME: foodorderingwesitedb
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    networks: [foodnet]
+
+networks:
+  foodnet:
+
+volumes:
+  mysql_data:

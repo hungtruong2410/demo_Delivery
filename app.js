@@ -42,6 +42,10 @@ app.use('/', userRoutes);   // Gắn tất cả route cho user
 app.use('/admin', adminRoutes);  // Gắn tất cả route cho admin
 
 
+//health check
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+
 // Export app (cho server.js hoặc test)
 module.exports = app;
 
