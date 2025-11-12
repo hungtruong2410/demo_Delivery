@@ -38,8 +38,8 @@ const ensureFn = (fn, name) => {
 // router.get("/admin_view_dispatch_orders", requireAdmin, adminController.renderViewDispatchOrdersPage);
 // router.post("/admin_view_dispatch_orders", requireAdmin, adminController.dispatchOrders);
 
-// // Quản lý sản phẩm
-// router.get("/admin_products", requireAdmin, adminController.renderAdminProducts);
+// Quản lý sản phẩm
+ router.get("/admin_products", requireAdmin, adminController.renderAdminProducts);
 // router.get("/admin_products/:id", requireAdmin, adminController.renderAdminProductDetail);
 // router.get("/admin_products/:id/edit", requireAdmin, adminController.renderAdminProductEdit);
 // router.post("/admin_products/:id/edit", requireAdmin, adminController.updateAdminProduct);
