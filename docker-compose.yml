@@ -19,7 +19,11 @@ services:
     restart: unless-stopped
     depends_on:
       db:
-        condition: service_healthy   # CHỜ DB sẵn sàng
+        condition: service_healthy
+    # ➜ THÊM 2 DÒNG NÀY
+    env_file:
+      - .env
+    # (tuỳ chọn) pass-through để chắc ăn:
     environment:
       NODE_ENV: production
       DB_HOST: db
@@ -27,6 +31,9 @@ services:
       DB_USER: root
       DB_PASSWORD: secret
       DB_NAME: foodorderingwesitedb
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+
     ports:
       - "3000:3000"
     volumes:
