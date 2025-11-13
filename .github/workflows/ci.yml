@@ -1,0 +1,68 @@
+name: CI - Build & Test Node App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -p${{ secrets.DB_PASSWORD }}"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for MySQL
+        run: |
+          echo "⏳ Waiting for MySQL to be ready..."
+          for i in {1..60}; do
+            mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -p${{ secrets.DB_PASSWORD }} --silent && break
+            sleep 2
+          done
+
+      - name: Import database schema
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -p${{ secrets.DB_PASSWORD }} ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
+
+      - name: Create .env file
+        run: |
+          cat > .env <<EOF
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET }}
+          STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE }}
+          NODE_ENV=production
+          EOF
+
+      - name: Build & Run test server
+        run: |
+          nohup npm start >/tmp/server.log 2>&1 &
+          sleep 5
+          curl -I http://localhost:3000 || (cat /tmp/server.log && false)
