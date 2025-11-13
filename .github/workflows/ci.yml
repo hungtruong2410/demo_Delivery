@@ -17,11 +17,7 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.DB_NAME }}
         ports:
           - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -p${{ secrets.DB_PASSWORD }}"
-          --health-interval=5s
-          --health-timeout=3s
-          --health-retries=20
+        
 
     steps:
       - name: Checkout code
@@ -35,6 +31,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
 
       - name: Wait for MySQL
         run: |
@@ -51,7 +52,7 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env <<EOF
-          DB_HOST=${{ secrets.DB_HOST }}
+          DB_HOST=127.0.0.1
           DB_PORT=${{ secrets.DB_PORT }}
           DB_USER=${{ secrets.DB_USER }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
@@ -64,5 +65,5 @@ jobs:
       - name: Build & Run test server
         run: |
           nohup npm start >/tmp/server.log 2>&1 &
-          sleep 5
+          sleep 10
           curl -I http://localhost:3000 || (cat /tmp/server.log && false)
