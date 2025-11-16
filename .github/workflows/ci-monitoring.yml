@@ -1,0 +1,57 @@
+name: CI with Monitoring
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: self-hosted    # <- runner chạy trên Mac của bạn
+
+    env:
+      PUSHGATEWAY_URL: http://192.168.31.81:9091
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and push metrics
+        run: |
+          start=$(date +%s)
+
+          # chạy test nhưng không kill job nếu fail để còn đẩy metrics
+          set +e
+          npm test
+          test_exit_code=$?
+          set -e
+
+          end=$(date +%s)
+          duration=$((end - start))
+
+          if [ $test_exit_code -eq 0 ]; then
+            pipeline_status=1
+          else
+            pipeline_status=0
+          fi
+
+          echo "Test exit code: $test_exit_code"
+          echo "Pipeline status: $pipeline_status"
+          echo "Duration: $duration seconds"
+
+          # Đẩy metrics lên Pushgateway
+          cat <<EOF | curl --data-binary @- "$PUSHGATEWAY_URL/metrics/job/food_ordering_ci"
+          cicd_pipeline_last_status{pipeline="food_ordering_ci"} $pipeline_status
+          cicd_pipeline_duration_seconds{pipeline="food_ordering_ci"} $duration
+          EOF
+
+          # Trả exit code về cho CI biết pass/fail
+          exit $test_exit_code

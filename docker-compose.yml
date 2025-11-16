@@ -15,17 +15,11 @@ services:
       retries: 10
 
   app:
-    app:
-      image: giahuy644446/demo-delivery
     build: .
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    # ➜ THÊM 2 DÒNG NÀY
-    env_file:
-      - .env
-    # (tuỳ chọn) pass-through để chắc ăn:
     environment:
       NODE_ENV: production
       DB_HOST: db
@@ -33,13 +27,56 @@ services:
       DB_USER: root
       DB_PASSWORD: secret
       DB_NAME: foodorderingwesitedb
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
-
     ports:
       - "3000:3000"
     volumes:
       - ./public/uploads:/app/public/uploads
+    networks: [foodnet]
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    restart: unless-stopped
+    ports:
+      - "9091:9091"
+    networks: [foodnet]
+
+  # --- MONITORING ---
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    networks: [foodnet]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks: [foodnet]
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [foodnet]
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
     networks: [foodnet]
 
 networks:
@@ -47,3 +84,4 @@ networks:
 
 volumes:
   mysql_data:
+  grafana_data:
