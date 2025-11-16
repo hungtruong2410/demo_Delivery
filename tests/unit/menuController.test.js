@@ -77,3 +77,6 @@ describe('menuController.getFood', () => {
     expect(next).not.toHaveBeenCalled();
   });
 });
+test('dummy fails on purpose', () => {
+  expect(1).toBe(2); // cố tình sai để CI fail
+});
