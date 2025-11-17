@@ -11,7 +11,7 @@ As the name says it all, it a simple full stack project which is used for orderi
     - Change the price of cuisine as per inflation rate.
     - View and dispatch order of the customers.
 - Admin can also verify the working of the website from his own end.
-- Use cookies for login into the account.
+- Use cookies for login into the account...
 
 ## Build With :
 <ul>
