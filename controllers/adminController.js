@@ -126,6 +126,7 @@ exports.deleteFood = async (req, res) => {
 /* =========================
    VIEW / DISPATCH ORDERS
 ========================= */
+
 // Trang danh sách đơn chờ + checkbox
 exports.renderViewDispatchOrdersPage = async (req, res) => {
   try {
@@ -133,14 +134,34 @@ exports.renderViewDispatchOrdersPage = async (req, res) => {
     const admin = await Admin.verify(cookuid, cookuname);
     if (!admin) return res.render('admin_signin');
 
-    const [rows] = await db.promise().query(
-      'SELECT order_id, user_id, item_id, quantity, price, datetime FROM orders ORDER BY datetime DESC'
-    );
+    // JOIN với menu để lấy tên món
+    const [rows] = await db.promise().query(`
+      SELECT
+        o.order_id,
+        o.user_id,
+        o.item_id,
+        o.quantity,
+        o.price,
+        o.datetime,
+        m.item_name
+      FROM orders o
+      JOIN menu m ON o.item_id = m.item_id
+      ORDER BY o.datetime DESC
+    `);
+
+    // Thêm field datetimeVN (giờ Việt Nam)
+    const orders = rows.map(row => ({
+      ...row,
+      datetimeVN: new Date(row.datetime).toLocaleString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour12: false,
+      }),
+    }));
 
     return res.render('admin_view_dispatch_orders', {
       username: cookuname,
       userid: cookuid,
-      orders: rows
+      orders,
     });
   } catch (e) {
     console.error('[renderViewDispatchOrdersPage]', e);
@@ -148,17 +169,28 @@ exports.renderViewDispatchOrdersPage = async (req, res) => {
   }
 };
 
-// Dispatch: MOVE orders -> order_dispatch (đúng schema SQL bạn cung cấp)
+// Dispatch: MOVE orders -> order_dispatch (đúng schema SQL)
 exports.dispatchOrders = async (req, res) => {
   const conn = db.promise();
-  try {
-    const raw =
-      req.body.orderIds ?? req.body.ids ?? req.body.orderId ??
-      req.body.order_id_s ?? req.body['orderIds[]'] ?? req.body['ids[]'] ?? req.body['orderId[]'];
 
+  try {
+    // Hứng đủ các kiểu form field có thể gửi lên
+    const raw =
+      req.body.orderIds ??
+      req.body.ids ??
+      req.body.orderId ??
+      req.body.order_id_s ??
+      req.body['orderIds[]'] ??
+      req.body['ids[]'] ??
+      req.body['orderId[]'];
+
+    // Chuẩn hóa thành mảng id string
     let ids = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     ids = [...new Set(ids.map(String).filter(Boolean))];
-    if (!ids.length) return res.status(400).json({ ok: false, moved: 0, error: 'No order IDs' });
+
+    if (!ids.length) {
+      return res.status(400).json({ ok: false, moved: 0, error: 'No order IDs' });
+    }
 
     await conn.beginTransaction();
 
@@ -183,11 +215,12 @@ exports.dispatchOrders = async (req, res) => {
     await conn.commit();
     return res.json({ ok: true, moved, mode: 'move' });
   } catch (err) {
-    try { await db.promise().rollback(); } catch {}
+    try { await conn.rollback(); } catch (_) {}
     console.error('[DISPATCH_ERROR]', err);
     return res.status(500).json({ ok: false, moved: 0, error: err.message || 'Server error' });
   }
 };
+
 
 /* =========================
    CHANGE PRICE

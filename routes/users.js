@@ -18,7 +18,7 @@ router.post("/cart", userController.updateCart);
 
 // === THANH TOÁN (Stripe) ===
 router.post("/create-checkout-session", userController.createCheckoutSession);
-router.get("/payment-success", userController.saveOrderAfterPayment);
+// router.get("/payment-success", userController.saveOrderAfterPayment);
 router.get("/payment-cancel", userController.paymentCancel);
 
 // === SAU THANH TOÁN / XEM ĐƠN ===

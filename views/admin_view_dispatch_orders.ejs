@@ -95,7 +95,7 @@
                                             <th style="width: 8%;">S.No.:</th>
                                             <th style="width: 40%;">Order ID</th>
                                             <th style="width: 8%;">User ID</th>
-                                            <th style="width: 8%;">Item ID</th>
+                                            <th style="width: 8%;">Product Name</th>
                                             <th style="width: 8%;">Quantity</th>
                                             <th style="width: 8%;">Price</th>
                                             <th style="width: 15%;">Date/Time</th>
@@ -103,40 +103,35 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <% let size=orders.length; %>
-                                            <% if(size==0) { %>
-                                                <h1>No Orders Are Pending</h1><br><br>
-                                                <% } else { %>
+                                <% let size = orders.length; %>
+                                <% if (size == 0) { %>
+                                    <h1>No Orders Are Pending</h1><br><br>
+                                <% } else { %>
 
-                                                    <% for(let i=0;i<size;i++) { %>
-                                                        <tr>
-                                                            <td>
-                                                                <%= i+1 %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].order_id %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].user_id %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].item_id %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].quantity %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].price %>
-                                                            </td>
-                                                            <td>
-                                                                <%= orders[i].datetime %>
-                                                            </td>
-                                                            <td><input type="checkbox" class="dispatch form-check-input"
-                                                                 name="orderIds" value="<%= orders[i].order_id %>"></td>
-                                                        </tr>
-                                                        <% } %>
-                                                            <% } %>
-                                    </tbody>
+                                    <% for (let i = 0; i < size; i++) { %>
+                                        <tr>
+                                            <td><%= i + 1 %></td>
+                                            <td><%= orders[i].order_id %></td>
+                                            <td><%= orders[i].user_id %></td>
+
+                                            <!-- ĐỔI item_id -> item_name -->
+                                            <td><%= orders[i].item_name %></td>
+
+                                            <td><%= orders[i].quantity %></td>
+                                            <td><%= orders[i].price %></td>
+
+                                            <!-- ĐỔI datetime -> datetimeVN (giờ VN) -->
+                                            <td><%= orders[i].datetimeVN %></td>
+
+                                            <td>
+                                            <input type="checkbox" class="dispatch form-check-input"
+                                                    name="orderIds" value="<%= orders[i].order_id %>">
+                                            </td>
+                                        </tr>
+                                    <% } %>
+                                <% } %>
+                            </tbody>
+
                                 </table>
                             </div>
                                     <button id="dispatchBtn" class="sec-btn"

@@ -20,6 +20,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Load environment variables from .env (create from .env.example). This ensures
+    # STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY are available inside the container.
+    env_file: .env
     environment:
       NODE_ENV: production
       DB_HOST: db
@@ -27,6 +30,8 @@ services:
       DB_USER: root
       DB_PASSWORD: secret
       DB_NAME: foodorderingwesitedb
+      STRIPE_SECRET_KEY:  ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
     ports:
       - "3000:3000"
     volumes:

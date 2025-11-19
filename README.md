@@ -33,6 +33,24 @@ As the name says it all, it a simple full stack project which is used for orderi
 - Type ``` npm install ``` in your command prompt or terminal.
 - Now to run the project on your server type ``` npm start ``` .
 
+## Environment / Stripe setup
+
+This project uses Stripe for payments. To enable payments locally you must set the Stripe secret key in an environment file.
+
+1. Copy `.env.example` to `.env` in the project root:
+
+     - Mac / Linux:
+
+         ```bash
+         cp .env.example .env
+         ```
+
+2. Edit `.env` and replace `STRIPE_SECRET_KEY` with your Stripe **test** secret key (starts with `sk_test_...`).
+
+3. Restart the server (`npm start`). The server loads environment variables via `dotenv` in the controllers.
+
+Important: Never commit your `.env` to source control (this repo already ignores `.env`).
+
 ## Screenshot :
 Here are some of the screenshot of Food Ordering Website.
 

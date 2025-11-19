@@ -14,13 +14,13 @@
   <div class="container">
     <div class="row align-items-center">
       <div class="col-lg-2">
-        <a href="/adminHomepage"><img src="/images/logo.png" width="160" height="36" alt="Logo"></a>
+        <a href="/admin/adminHomepage"><img src="/images/logo.png" width="160" height="36" alt="Logo"></a>
       </div>
       <div class="col-lg-10 d-flex justify-content-between">
         <nav>
           <ul class="menu food-nav-menu d-flex gap-3" style="list-style:none;margin:0;padding:0;">
-            <li><a href="/adminHomepage">Home</a></li>
-            <li><a href="/admin_dashboard" class="fw-bold">Dashboard</a></li>
+            <li><a href="/admin/adminHomepage">Home</a></li>
+            <li><a href="/admin/admin_dashboard" class="fw-bold">Dashboard</a></li>
           </ul>
         </nav>
         <div><a class="btn btn-sm btn-outline-secondary" href="/logout">Logout</a></div>
@@ -34,10 +34,10 @@
 
   <form id="filterForm" class="row g-2 mb-4">
     <div class="col-auto">
-      <input type="date" class="form-control" id="from" value="<%= from %>">
+      <input type="date" class="form-control" id="from" value="%= from %>">
     </div>
     <div class="col-auto">
-      <input type="date" class="form-control" id="to" value="<%= to %>">
+      <input type="date" class="form-control" id="to" value="%= to %>">
     </div>
     <div class="col-auto">
       <button class="btn btn-primary" type="submit">Áp dụng</button>
@@ -80,7 +80,7 @@
 <footer class="site-footer mt-5">
   <div class="bottom-footer">
     <div class="container text-center">
-      <p class="m-0">© <%= new Date().getFullYear() %> Hungry To Eat</p>
+      <p class="m-0">© %= new Date().getFullYear() %> Hungry To Eat</p>
     </div>
   </div>
 </footer>
@@ -88,11 +88,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 async function fetchMetrics(params){
-  const url = new URL(window.location.origin + '/admin_dashboard/metrics');
+  const url = new URL(window.location.origin + '/admin/admin_dashboard/metrics');
   url.search = new URLSearchParams(params).toString();
   const res = await fetch(url);
   return res.json();
 }
+
 function formatVND(n){ try { return Number(n).toLocaleString('vi-VN',{style:'currency',currency:'VND'});} catch { return n; } }
 
 let revChart, statusChart;

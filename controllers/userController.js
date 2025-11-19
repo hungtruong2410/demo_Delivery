@@ -3,15 +3,6 @@ require('dotenv').config();
 const connection = require('../db.js');
 const { v4: uuidv4 } = require('uuid');
 
-// ---- Stripe: lazy init + guard (không crash nếu thiếu key) ----
-const Stripe = require('stripe');
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
-let stripe = null;
-function getStripe() {
-  if (!stripeSecret) return null;        // Thiếu key -> trả null, không khởi tạo
-  if (!stripe) stripe = Stripe(stripeSecret); // Lazy init 1 lần
-  return stripe;
-}
 // ---------------------------------------------------------------
 
 // --- Biến global cho giỏ hàng (giữ nguyên như code gốc) ---
@@ -94,11 +85,13 @@ function renderCart(req, res) {
     [userId, userName],
     function (error, results) {
       if (!error && results.length) {
+        // Inject Stripe publishable key into the view so client can call Stripe.js
         return res.render("cart", {
           username: userName,
           userid: userId,
           items: citemdetails,
           item_count: item_in_cart,
+          stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
         });
       } else { return res.render("signin"); }
     }
@@ -142,116 +135,79 @@ function getItemDetails(citems_ids, size) {
 
 // ========== Thanh toán (Stripe) ==========
 // Bước 1: Tạo checkout session
+// ========== Thanh toán (FAKE, không dùng Stripe) ==========
+// Bước 1: "Tạo" checkout session giả lập
+// ========== Thanh toán đơn giản (KHÔNG Stripe) ==========
+// Bấm Thanh Toán -> gửi cart lên -> tạo orders -> trả redirect '/confirmation'
 async function createCheckoutSession(req, res) {
-  const s = getStripe();
-  if (!s) {
-    // Không có key -> không cho thanh toán, nhưng KHÔNG làm app crash
-    return res.status(503).json({ error: 'Payments disabled (missing STRIPE_SECRET_KEY)' });
-  }
+  try {
+    const userId = req.cookies.cookuid;
+    const userName = req.cookies.cookuname;
 
-  const { cart } = req.body; // [{ id, quantity }]
-  if (!Array.isArray(cart) || cart.length === 0) {
-    return res.status(400).json({ error: 'Giỏ hàng rỗng' });
-  }
-
-  const itemIds = cart.map(item => item.id);
-  const quantities = cart.reduce((acc, item) => {
-    acc[item.id] = item.quantity;
-    return acc;
-  }, {});
-
-  const sql = "SELECT * FROM menu WHERE item_id IN (?)";
-  connection.query(sql, [itemIds], async function (error, itemsFromDB) {
-    if (error || !itemsFromDB.length) {
-      console.log(error);
-      return res.status(500).json({ error: 'Không thể lấy thông tin sản phẩm' });
+    if (!userId || !userName) {
+      return res.status(401).json({ error: 'Bạn cần đăng nhập trước khi thanh toán.' });
     }
 
-    try {
-      const line_items = itemsFromDB.map(item => {
+    const cart = req.body.cart || [];       // [{ id, quantity }]
+    if (!Array.isArray(cart) || cart.length === 0) {
+      return res.status(400).json({ error: 'Giỏ hàng rỗng.' });
+    }
+
+    const itemIds = cart.map(item => item.id);
+    const quantities = cart.reduce((acc, item) => {
+      acc[item.id] = item.quantity;
+      return acc;
+    }, {});
+
+    const sql = 'SELECT item_id, item_price FROM menu WHERE item_id IN (?)';
+    connection.query(sql, [itemIds], function (error, itemsFromDB) {
+      if (error || !itemsFromDB.length) {
+        console.log(error);
+        return res.status(500).json({ error: 'Không thể lấy thông tin sản phẩm.' });
+      }
+
+      const currDate = new Date();
+      let itemsProcessed = 0;
+      let hadError = false;
+
+      itemsFromDB.forEach((item) => {
         const quantity = quantities[item.item_id] || 1;
-        return {
-          price_data: {
-            currency: 'inr',
-            product_data: { name: item.item_name },
-            unit_amount: Math.round(Number(item.item_price) * 100), // INR -> paise
-          },
-          quantity: quantity,
-        };
-      });
+        const price = Number(item.item_price) || 0;
 
-      // Lưu giỏ hàng tạm
-      res.cookie('cart_for_payment', JSON.stringify(cart), { httpOnly: true, maxAge: 10 * 60 * 1000 });
+        connection.query(
+          'INSERT INTO orders (order_id, user_id, item_id, quantity, price, datetime) VALUES (?, ?, ?, ?, ?, ?)',
+          [uuidv4(), userId, item.item_id, quantity, price * quantity, currDate],
+          function (errInsert) {
+            itemsProcessed++;
+            if (errInsert) {
+              hadError = true;
+              console.log(errInsert);
+            }
 
-      const session = await s.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items,
-        mode: 'payment',
-        success_url: `${req.protocol}://${req.get('host')}/payment-success`,
-        cancel_url: `${req.protocol}://${req.get('host')}/cart`,
-      });
+            if (itemsProcessed === itemsFromDB.length) {
+              if (hadError) {
+                return res
+                  .status(500)
+                  .json({ error: 'Có lỗi khi lưu đơn hàng. Vui lòng thử lại.' });
+              }
 
-      return res.json({ id: session.id });
-    } catch (stripeError) {
-      console.error("Lỗi tạo phiên Stripe:", stripeError);
-      return res.status(500).json({ error: 'Lỗi server khi tạo thanh toán' });
-    }
-  });
-}
+              // Clear giỏ trong server
+              citems = [];
+              citemdetails = [];
+              item_in_cart = 0;
 
-// Bước 2: Lưu đơn sau khi thanh toán thành công
-function saveOrderAfterPayment(req, res) {
-  const userId = req.cookies.cookuid;
-  const userName = req.cookies.cookuname;
-  const cartString = req.cookies.cart_for_payment;
-
-  if (!userId || !userName) return res.render("signin");
-  if (!cartString) {
-    console.log("Lỗi: Không tìm thấy giỏ hàng sau khi thanh toán.");
-    return res.render("confirmation", { username: userName, userid: userId });
-  }
-
-  const cart = JSON.parse(cartString);
-  const itemIds = cart.map(item => item.id);
-  const quantities = cart.reduce((acc, item) => {
-    acc[item.id] = item.quantity;
-    return acc;
-  }, {});
-
-  const sql = "SELECT item_id, item_price FROM menu WHERE item_id IN (?)";
-  connection.query(sql, [itemIds], function (error, itemsFromDB) {
-    if (error) {
-      console.log(error);
-      return res.status(500).send("Lỗi khi lưu đơn hàng.");
-    }
-
-    const currDate = new Date();
-    let itemsProcessed = 0;
-
-    itemsFromDB.forEach((item) => {
-      const quantity = quantities[item.item_id] || 1;
-      const price = Number(item.item_price) || 0;
-
-      connection.query(
-        "INSERT INTO orders (order_id, user_id, item_id, quantity, price, datetime) VALUES (?, ?, ?, ?, ?, ?)",
-        [uuidv4(), userId, item.item_id, quantity, price * quantity, currDate],
-        function (errInsert) {
-          itemsProcessed++;
-          if (errInsert) console.log(errInsert);
-
-          if (itemsProcessed === itemsFromDB.length) {
-            res.clearCookie('cart_for_payment');
-            citems = [];
-            citemdetails = [];
-            item_in_cart = 0;
-            return res.render("confirmation", { username: userName, userid: userId });
+              // OK -> client redirect sang trang xác nhận
+              return res.json({ ok: true, redirect: '/confirmation' });
+            }
           }
-        }
-      );
+        );
+      });
     });
-  });
+  } catch (err) {
+    console.error('Checkout error:', err);
+    return res.status(500).json({ error: 'Lỗi server khi xử lý thanh toán.' });
+  }
 }
-
 // Bước 3: Hủy thanh toán
 function paymentCancel(req, res) { return res.redirect("/cart"); }
 
@@ -419,7 +375,6 @@ module.exports = {
   renderCart,
   updateCart,
   createCheckoutSession,
-  saveOrderAfterPayment,
   paymentCancel,
   renderConfirmationPage,
   renderMyOrdersPage,

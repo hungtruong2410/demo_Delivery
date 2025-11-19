@@ -9,344 +9,278 @@
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.0/css/line.css">
     <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
     <link rel="stylesheet" href="/stylesheets/swiper-bundle.min.css">
-
     <link rel="stylesheet" href="/stylesheets/jquery.fancybox.min.css">
     <link rel="stylesheet" href="/stylesheets/style.css">
- 
-   <style>
+
+    <style>
         table,
         th,
         tr,
         td {
             border: 2px solid black;
-padding: 8px 10px;
+            padding: 8px 10px;
             border-radius: 20px;
         }
 
         a {
             color: white;
-}
+        }
     </style>
-
-    <script src="https://js.stripe.com/v3/"></script>
+    <!-- ĐÃ BỎ Stripe script -->
 </head>
 
 <body class="body-fixed">
-    <header class="site-header">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-2">
-                    <div class="header-logo">
-                     
-   <a href="/homepage">
-                            <img src="/images/logo.png" width="160" height="36" alt="Logo">
-                        </a>
-                    </div>
+<header class="site-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-2">
+                <div class="header-logo">
+                    <a href="/homepage">
+                        <img src="/images/logo.png" width="160" height="36" alt="Logo">
+                    </a>
                 </div>
-    
+            </div>
+
             <div class="col-lg-10">
-                    <div class="main-navigation">
-                        <button class="menu-toggle"><span></span><span></span></button>
-                        <nav class="header-menu">
-                
-            <ul class="menu food-nav-menu">
-                                <li><a href="/homepage">Home</a></li>
-                                <li><a href="#about">About</a></li>
-                    
-            <li><a href="#team">Our Team</a></li>
-                                <li><a href="#testimonials">Testimonials</a></li>
-                                <li><a href="#contact">Contact</a></li>
-                    
-        </ul>
-                        </nav>
-                        <div class="header-right">
-                            <form action="#" class="header-search-form for-des">
-            
-                    <input type="search" class="form-input" placeholder="Search Here...">
-                                <button type="submit">
-                                    <i class="uil uil-search"></i>
-     
-                           </button>
-                            </form>
-                            <a href="javascript:void(0)" class="header-btn header-cart">
-              
-                  <i class="uil uil-shopping-bag"></i>
-                                <span class="cart-number" id="cart-number-count">
-                                    <%= item_count %>
-        
-                        </span>
-                            </a>
-                            <div class="dropdown">
-                   
-             <label><button onclick="myFunction()" class="header-username"
-                                        style="color: #ff8243;
-padding: 4px 8px;"><b><i>
-                                                <%= username %>
-                                            </i></b></button></label>
-    
+                <div class="main-navigation">
+                    <button class="menu-toggle"><span></span><span></span></button>
+                    <nav class="header-menu">
+                        <ul class="menu food-nav-menu">
+                            <li><a href="/homepage">Home</a></li>
+                            <li><a href="#about">About</a></li>
+                            <li><a href="#team">Our Team</a></li>
+                            <li><a href="#testimonials">Testimonials</a></li>
+                            <li><a href="#contact">Contact</a></li>
+                        </ul>
+                    </nav>
+                    <div class="header-right">
+                        <form action="#" class="header-search-form for-des">
+                            <input type="search" class="form-input" placeholder="Search Here...">
+                            <button type="submit">
+                                <i class="uil uil-search"></i>
+                            </button>
+                        </form>
+                        <a href="javascript:void(0)" class="header-btn header-cart">
+                            <i class="uil uil-shopping-bag"></i>
+                            <span class="cart-number" id="cart-number-count">
+                                <%= item_count %>
+                            </span>
+                        </a>
+                        <div class="dropdown">
+                            <label>
+                                <button onclick="myFunction()" class="header-username"
+                                        style="color: #ff8243; padding: 4px 8px;">
+                                    <b><i><%= username %></i></b>
+                                </button>
+                            </label>
                             <div id="myDropdown" class="dropdown-content">
-                                    <a href="/myorders">My Orders</a>
-                                
-    <a href="/settings">Settings</a>
-                                    <a href="/logout">Sign Out</a>
-                                </div>
-                         
-   </div>
+                                <a href="/myorders">My Orders</a>
+                                <a href="/settings">Settings</a>
+                                <a href="/logout">Sign Out</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </header>
-    <div id="viewport">
-        <div id="js-scroll-content">
-
-            <section class="about-sec section" id="cart" style="background-image: url(/images/menu-bg.png);">
-                <div class="container">
-                    <div class="row">
-                   
-                        <div class="col-lg-12">
-                                <div class="sec-title text-center mb-5">
-                             
-       <h2 class="h2-title">My Cart</h2>
-                                    <div class="sec-title-shape mb-4">
-                                        <img src="/images/title-shape.svg" alt="">
-           
-                         </div>
-                                    <% let count=0 %>
-                                    
-    <% let total_price=0 %>
-                                            <% let total_items=0 %>
-                                              
-  <table id="mycart">
-                                                    <thead>
-                                             
-           <tr>
-                                                            <th style="width: 5%;">S.No.:</th>
-                           
-                                 <th style="width: 10%;">Product</th>
-                                                            <th style="width: 50%;">Product Name</th>
-  
-                                                          <th style="width: 10%;">Price</th>
-                                        
-                    <th style="width: 5%;">Quantity</th>
-                                                            <th style="width: 20%;">SubTotal</th>
-                
-                                        </tr>
-                                                    </thead>
-        
-                                                                                                <tbody id="cart-table-body">
-                                                        
-<% for(let i=0;i<items.length;i++) { %>
-                                                            <tr data-item-id="<%= items[i].item_id %>">
-                                    
-                            <% count++ %>
-                                                                    <td>
-  
-                                                                      <%= i+1 %>
-                            
-                                        </td>
-                                                            
-        <td><img src="/images/dish/<%= items[i].item_img %>"
-                                                                            alt=""
-             
-                                                               style="border-radius: 10%;
-border: 2px solid rgb(68, 66, 66) ; box-shadow: 4px 4px 8px black;">
-                                                                    </td>
-                     
-                                               <td>
-                                                     
-                   <%= items[i].item_name %>
-                                                                    </td>
-           
-                                                         <td>₹ <span class="item-price">
-                                         
-                                   <%= items[i].item_price %>
-                                                               
-         </span></td>
-                                                                    <td><input type="number" style="text-align: center;"
-                    
-                                                        placeholder="Qty"
-                                            
-                                                                                                class="quantity form-input"
-                                                                  
-                                                                          id="quantity_<%= i %>" value="1" min="1" 
-                                                                            onchange="updateData(this.value,'<%= i %>');">
-          
-                                                          </td>
-                                          
-                          <td>₹ <span class="price">
-                                                                        
-    <%= items[i].item_price %>
-                                                                        </span></td>
-                      
-                                                                                                      <% total_price +=items[i].item_price %>
-                                                            </tr>
-   
-                                                         <% } %>
-                                         
-           </tbody>
-                                                    <tfoot>
-                                     
-                   <tr>
-                                                            <td colspan="4"><strong>Total</strong></td>
-                    
-                                        <td id="total_quantity">
-                                                           
-     <%= count %>
-                                                            </td>
-                                 
-                           <span id="inital_quantity" style="display: hidden;" hidden>
-                                                                <%= count %>
-   
-                                                         </span>
-                                           
-                 <td id="total_price">₹ <%= total_price %>
-                                                            </td>
-                   
-                                         <span id="inital_price" style="display: hidden;" hidden>
-                                                       
-         <%= total_price %>
-                                                            </span>
-                             
-                           </tr>
-                                                    </tfoot>
-                     
-                           </table>
-                                </div>
-                            </div><br><br>
-             
-                                           <button id="checkout-button" class="sec-btn"
-                                style="margin-left: 43% ;
-width:20% ;color: white; background: orange;">
-                                Thanh toán
-                            </button>
-                        
-                        </div>
-                </div>
-            </section>
-                 <footer class="site-footer" id="contact">
-                </footer>
-        </div>
     </div>
+</header>
 
-    <script>
-        // Script updateData gốc của bạn [cite: 271-279]
-        function updateData(qty, i) {
-            
-            // Đảm bảo số lượng là số dương
-            if (parseInt(qty) < 1) {
-                qty = 1;
-                document.getElementById('quantity_' + i).value = 1;
+<div id="viewport">
+    <div id="js-scroll-content">
+        <section class="about-sec section" id="cart" style="background-image: url(/images/menu-bg.png);">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="sec-title text-center mb-5">
+                            <h2 class="h2-title">My Cart</h2>
+                            <div class="sec-title-shape mb-4">
+                                <img src="/images/title-shape.svg" alt="">
+                            </div>
+
+                            <% let count = 0; %>
+                            <% let total_price = 0; %>
+
+                            <table id="mycart">
+                                <thead>
+                                <tr>
+                                    <th style="width: 5%;">S.No.:</th>
+                                    <th style="width: 10%;">Product</th>
+                                    <th style="width: 50%;">Product Name</th>
+                                    <th style="width: 10%;">Price</th>
+                                    <th style="width: 5%;">Quantity</th>
+                                    <th style="width: 20%;">SubTotal</th>
+                                </tr>
+                                </thead>
+
+                                <tbody id="cart-table-body">
+                                <% for (let i = 0; i < items.length; i++) { %>
+                                    <tr data-item-id="<%= items[i].item_id %>">
+                                        <% count++ %>
+                                        <td><%= i + 1 %></td>
+                                        <td>
+                                            <img src="/images/dish/<%= items[i].item_img %>"
+                                                 alt=""
+                                                 style="border-radius: 10%; border: 2px solid rgb(68, 66, 66); box-shadow: 4px 4px 8px black;">
+                                        </td>
+                                        <td><%= items[i].item_name %></td>
+                                        <td>₹ <span class="item-price"><%= items[i].item_price %></span></td>
+                                        <td>
+                                            <input type="number"
+                                                   style="text-align: center;"
+                                                   placeholder="Qty"
+                                                   class="quantity form-input"
+                                                   id="quantity_<%= i %>"
+                                                   value="1"
+                                                   min="1"
+                                                   onchange="updateData(this.value,'<%= i %>');">
+                                        </td>
+                                        <td>₹ <span class="price"><%= items[i].item_price %></span></td>
+                                        <% total_price += items[i].item_price %>
+                                    </tr>
+                                <% } %>
+                                </tbody>
+
+                                <tfoot>
+                                <tr>
+                                    <td colspan="4"><strong>Total</strong></td>
+                                    <td id="total_quantity"><%= count %></td>
+                                    <span id="inital_quantity" style="display: hidden;" hidden><%= count %></span>
+                                    <td id="total_price">₹ <%= total_price %></td>
+                                    <span id="inital_price" style="display: hidden;" hidden><%= total_price %></span>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <br><br>
+
+                    <button id="checkout-button" class="sec-btn"
+                            style="margin-left: 43%; width:20%; color: white; background: orange;">
+                        Thanh toán
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <footer class="site-footer" id="contact"></footer>
+    </div>
+</div>
+
+<!-- Script cập nhật số lượng & tổng tiền -->
+<script>
+    function updateData(qty, i) {
+        // Đảm bảo số lượng là số dương
+        if (parseInt(qty) < 1) {
+            qty = 1;
+            document.getElementById('quantity_' + i).value = 1;
+        }
+
+        // Updating Sub Price
+        const item_price = document.querySelectorAll(".item-price");
+        const newPrice = parseInt(qty) * parseInt(item_price[i].innerHTML);
+        document.querySelectorAll(".price")[i].innerHTML = newPrice;
+
+        // Updating Total Quantity
+        const quantity = document.querySelectorAll(".quantity");
+        let total_qty = 0;
+        for (let j = 0; j < quantity.length; j++) {
+            total_qty += parseInt(quantity[j].value);
+        }
+        document.getElementById("total_quantity").innerHTML = total_qty;
+
+        // Updating Total Price
+        const price = document.querySelectorAll(".price");
+        let total_price = 0;
+        for (let j = 0; j < price.length; j++) {
+            total_price += parseInt(price[j].innerHTML);
+        }
+        document.getElementById("total_price").innerHTML = "₹ " + total_price;
+    }
+</script>
+
+<!-- Script Thanh toán: GỬI CART LÊN SERVER, KHÔNG DÙNG STRIPE -->
+<script>
+    const checkoutButton = document.getElementById('checkout-button');
+
+    async function handleCheckout() {
+        // 1. Thu thập dữ liệu giỏ hàng từ DOM
+        const cartRows = document.querySelectorAll("#cart-table-body tr");
+        if (cartRows.length === 0) {
+            alert("Giỏ hàng của bạn đang rỗng.");
+            return;
+        }
+
+        const cartItems = [];
+        cartRows.forEach(row => {
+            const itemId = row.getAttribute('data-item-id');
+            const quantityInput = row.querySelector('.quantity');
+            const quantity = parseInt(quantityInput.value);
+
+            if (itemId && quantity > 0) {
+                cartItems.push({
+                    id: itemId,
+                    quantity: quantity
+                });
+            }
+        });
+
+        if (cartItems.length === 0) {
+            alert("Giỏ hàng không hợp lệ.");
+            return;
+        }
+
+        // 2. Gửi dữ liệu giỏ hàng lên server
+        try {
+            const response = await fetch('/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ cart: cartItems }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+                alert(data.error || 'Đã xảy ra lỗi khi xử lý thanh toán. Vui lòng thử lại.');
+                return;
             }
 
-     // Updating Sub Price 
-            const item_price = document.querySelectorAll(".item-price");
-const newPrice = parseInt(qty) * parseInt(item_price[i].innerHTML);
-            document.querySelectorAll(".price")[i].innerHTML = newPrice;
-
-// Updating Total Quantity
-            const quantity = document.querySelectorAll(".quantity");
-let total_qty = parseInt(0);
-            for (let j = 0; j < quantity.length; j++) {
-                total_qty += parseInt(quantity[j].value);
-}
-            document.getElementById("total_quantity").innerHTML = total_qty;
-
-// Updating Total Price
-            const price = document.querySelectorAll(".price");
-let total_price = parseInt(0);
-            for (let j = 0; j < price.length; j++) {
-                total_price += parseInt(price[j].innerHTML);
-}
-            document.getElementById("total_price").innerHTML = "₹ " + total_price;
-}
-
-    </script>
-    
-    <script>
-        // === DÁN KHÓA CÔNG KHAI (Publishable Key) CỦA BẠN VÀO ĐÂY ===
-        const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SQTjBI9HJf7CxSL5j70B7jFy9v5W4Ijlhe0ndKiPrpZVICHp2T7nOMbZOGlpuhTsZpWLXbyl1v8DBwZpiXmizzN00ACDkL6a6'; 
-        // ==========================================================
-
-        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-        const checkoutButton = document.getElementById('checkout-button');
-
-        if (checkoutButton) {
-            checkoutButton.addEventListener('click', async () => {
-                
-                // 1. Thu thập dữ liệu giỏ hàng từ DOM
-                const cartRows = document.querySelectorAll("#cart-table-body tr");
-                if (cartRows.length === 0) {
-                    alert("Giỏ hàng của bạn đang rỗng.");
-                    return;
-                }
-
-                const cartItems = [];
-                cartRows.forEach(row => {
-                    const itemId = row.getAttribute('data-item-id');
-                    const quantityInput = row.querySelector('.quantity');
-                    const quantity = parseInt(quantityInput.value);
-
-                    if (itemId && quantity > 0) {
-                        cartItems.push({
-                            id: itemId,
-                            quantity: quantity
-                        });
-                    }
-                });
-
-                if (cartItems.length === 0) {
-                    alert("Giỏ hàng không hợp lệ.");
-                    return;
-                }
-
-                // 2. Gửi dữ liệu giỏ hàng lên server
-                try {
-                    const response = await fetch('/create-checkout-session', {
-                        method: 'POST',
-                        headers: {
-                        'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ cart: cartItems }), // Gửi giỏ hàng lên server
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Không thể tạo phiên thanh toán');
-                    }
-
-                    const session = await response.json();
-
-                    // 3. Chuyển hướng đến trang thanh toán của Stripe
-                    const result = await stripe.redirectToCheckout({
-                        sessionId: session.id,
-                    });
-
-                    if (result.error) {
-                        alert(result.error.message);
-                    }
-                } catch (error) {
-                    console.error('Lỗi:', error);
-                    alert('Đã xảy ra lỗi khi xử lý thanh toán. Vui lòng thử lại.');
-                }
-            });
+            // 3. Redirect sang trang xác nhận
+            if (data.redirect) {
+                window.location.href = data.redirect;   // -> /confirmation
+            } else {
+                alert('Thanh toán thành công nhưng không nhận được URL chuyển trang.');
+            }
+        } catch (error) {
+            console.error('Lỗi:', error);
+            alert('Đã xảy ra lỗi khi xử lý thanh toán. Vui lòng thử lại.');
         }
-    </script>
+    }
 
-    <script src="/javascripts/jquery-3.5.1.min.js"></script>
-    <script src="/javascripts/bootstrap.min.js"></script>
-    <script src="/javascripts/popper.min.js"></script>
-    <script src="/javascripts/font-awesome.min.js"></script>
-    <script src="/javascripts/swiper-bundle.min.js"></script>
-    <script src="/javascripts/jquery.mixitup.min.js"></script>
-    <script src="/javascripts/query.fancybox.min.js"></script>
-    <script src="/javascripts/parallax.min.js"></script>
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', function (e) {
+            e.preventDefault();
+            handleCheckout();
+        });
+    }
+</script>
+
+<script src="/javascripts/jquery-3.5.1.min.js"></script>
+<script src="/javascripts/bootstrap.min.js"></script>
+<script src="/javascripts/popper.min.js"></script>
+<script src="/javascripts/font-awesome.min.js"></script>
+<script src="/javascripts/swiper-bundle.min.js"></script>
+<script src="/javascripts/jquery.mixitup.min.js"></script>
+<script src="/javascripts/query.fancybox.min.js"></script>
+<script src="/javascripts/parallax.min.js"></script>
 <script src="/javascripts/gsap.min.js"></script>
-    <script src="/javascripts/ScrollTrigger.min.js"></script>
-    <script src="/javascripts/ScrollToPlugin.min.js"></script>
-    <script src="/javascripts/smooth-scroll.js"></script>
-    <script src="/javascripts/main.js"></script>
-    
-    </body>
+<script src="/javascripts/ScrollTrigger.min.js"></script>
+<script src="/javascripts/ScrollToPlugin.min.js"></script>
+<script src="/javascripts/smooth-scroll.js"></script>
+<script src="/javascripts/main.js"></script>
 
+</body>
 </html>
