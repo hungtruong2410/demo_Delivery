@@ -68,4 +68,4 @@ Here are some of the screenshot of Food Ordering Website.
 12. Admin Welcome Page :<br><br> <img src="screenshot/Admin Welcome Page.png"><br><br>
 13. Admin Adding Food Page :<br><br> <img src="screenshot/Admin Adding Food Page.png"><br><br>
 14. Changing Price of Cuisine :<br><br> <img src="screenshot/Changing Price of Cuisine.png"><br><br>
-14. Admin Order View & Dispatching Page :<br><br> <img src="screenshot/Admin Viewing and Dispatching Order Page.png"><br><br>
+14. Admin Order View & Dispatching Page .:<br><br> <img src="screenshot/Admin Viewing and Dispatching Order Page.png"><br><br>
