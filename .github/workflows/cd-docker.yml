@@ -6,10 +6,8 @@ on:
 
 jobs:
   deploy:
-    runs-on:
-  - self-hosted
-  - macOS
-  - ARM64
+    runs-on: [self-hosted, macOS, ARM64]
+
 
 
 
