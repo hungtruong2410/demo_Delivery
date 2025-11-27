@@ -1,0 +1,64 @@
+name: Run unit & integration tests
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run unit & integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # --------------------------
+      # 1. Setup job
+      # --------------------------
+      - name: Set up job
+        run: echo "Starting CI pipeline..."
+
+      # --------------------------
+      # 2. Checkout code
+      # --------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --------------------------
+      # 3. Setup Node
+      # --------------------------
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # --------------------------
+      # 4. Install npm dependencies
+      # --------------------------
+      - name: Install deps (root)
+        run: npm install
+
+      # --------------------------
+      # 5. Run unit tests
+      # --------------------------
+      - name: Unit tests
+        run: npm run test:unit || npm test -- --runTestsByPath tests/unit
+
+      # --------------------------
+      # 6. Run integration tests
+      # --------------------------
+      - name: Integration tests
+        run: npm run test:integration || npm test -- --runTestsByPath tests/integration
+
+      # --------------------------
+      # 7. Cleanup steps
+      # --------------------------
+      - name: Post Use Node 20
+        run: echo "Finished Node steps."
+
+      - name: Post Checkout
+        run: echo "Post checkout done."
+
+      - name: Complete job
+        run: echo "CI completed successfully!"
