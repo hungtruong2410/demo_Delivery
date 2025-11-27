@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted    # <- runner chạy trên Mac của bạn
+    runs-on: ubuntu-latest    # <<< FIXED — dùng runner của GitHub
 
     env:
       PUSHGATEWAY_URL: http://127.0.0.1:9091
