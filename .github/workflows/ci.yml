@@ -7,9 +7,8 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, macOS, ARM64]
-
-
+    # CHỈ SỬA DÒNG NÀY
+    runs-on: ubuntu-latest
 
     services:
       mysql:
@@ -19,7 +18,6 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.DB_NAME }}
         ports:
           - 3306:3306
-        
 
     steps:
       - name: Checkout code
@@ -33,7 +31,7 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Install MySQL client
         run: |
           sudo apt-get update
