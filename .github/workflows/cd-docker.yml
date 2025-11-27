@@ -6,7 +6,8 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    rruns-on: self-hosted
+
 
     steps:
       - name: Checkout code
