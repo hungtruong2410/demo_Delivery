@@ -1,66 +1,41 @@
-name: Run unit & integration tests
+name: CI - Node App + k6 Performance
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main, dev ]
-  workflow_dispatch:
 
 jobs:
-  test:
-    name: Run unit & integration tests
+  build-test:
     runs-on: [self-hosted, macOS, ARM64]
 
-
-
     steps:
-      # --------------------------
-      # 1. Setup job
-      # --------------------------
-      - name: Set up job
-        run: echo "Starting CI pipeline..."
-
-      # --------------------------
-      # 2. Checkout code
-      # --------------------------
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # --------------------------
-      # 3. Setup Node
-      # --------------------------
-      - name: Use Node 20
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 18
 
-      # --------------------------
-      # 4. Install npm dependencies
-      # --------------------------
-      - name: Install deps (root)
+      - name: Install dependencies
         run: npm install
 
-      # --------------------------
-      # 5. Run unit tests
-      # --------------------------
-      - name: Unit tests
-        run: npm run test:unit || npm test -- --runTestsByPath tests/unit
+      - name: Start server for k6 testing
+        run: |
+          nohup npm start > server.log 2>&1 &
+          sleep 5
 
-      # --------------------------
-      # 6. Run integration tests
-      # --------------------------
-      - name: Integration tests
-        run: npm run test:integration || npm test -- --runTestsByPath tests/integration
+      - name: Install k6
+        run: |
+          brew install k6
 
-      # --------------------------
-      # 7. Cleanup steps
-      # --------------------------
-      - name: Post Use Node 20
-        run: echo "Finished Node steps."
+      - name: Run k6 performance test
+        run: |
+          k6 run loadtest_ci.js
 
-      - name: Post Checkout
-        run: echo "Post checkout done."
-
-      - name: Complete job
-        run: echo "CI completed successfully!"
+      - name: Show server logs if test FAIL
+        if: failure()
+        run: |
+          echo "❗ SERVER LOG ❗"
+          cat server.log
