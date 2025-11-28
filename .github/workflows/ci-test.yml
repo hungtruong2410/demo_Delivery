@@ -32,7 +32,7 @@ jobs:
 
       - name: Run k6 performance test
         run: |
-          k6 run loadtest_ci.js
+          k6 run loadtest.js
 
       - name: Show server logs if test FAIL
         if: failure()
