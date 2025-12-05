@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-monitor:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     env:
       PUSHGATEWAY_URL: http://127.0.0.1:9091
