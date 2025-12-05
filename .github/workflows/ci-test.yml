@@ -40,7 +40,7 @@ jobs:
           echo "❗ SERVER LOG ❗"
           cat server.log
       - name: Send Pipeline Data to Datadog
-        uses: Datadog/ci-visibility-github-action@v1
+        uses: DataDog/ci-visibility-github-action@v1
         with:
           api_key: ${{ secrets.DD_API_KEY }}
-          site: ${{ secrets.DD_SITE }}
+          site: "us5.datadoghq.com"

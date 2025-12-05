@@ -59,7 +59,7 @@ jobs:
           # Trả exit code về cho CI biết pass/fail
           exit $test_exit_code
       - name: Send Pipeline Data to Datadog
-        uses: Datadog/ci-visibility-github-action@v1
+        uses: DataDog/ci-visibility-github-action@v1
         with:
           api_key: ${{ secrets.DD_API_KEY }}
-          site: ${{ secrets.DD_SITE }}
+          site: "us5.datadoghq.com"
