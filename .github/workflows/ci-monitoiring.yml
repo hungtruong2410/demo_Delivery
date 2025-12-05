@@ -1,25 +1,49 @@
-
-name: CI - Monitoring
+name: CI Monitoring Metrics
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
-  monitor:
-    runs-on: ubuntu-latest
+  build-and-monitor:
+    runs-on: self-hosted
+
+    env:
+      PUSHGATEWAY_URL: http://127.0.0.1:9091
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install k6
-        run: |
-          curl -s https://api.github.com/repos/grafana/k6/releases/latest \
-          | grep "browser_download_url.*linux-amd64" \
-          | cut -d '"' -f 4 \
-          | wget -qi -
-          tar -xvf k6*.tar.gz
-          sudo mv k6-*/k6 /usr/local/bin/
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-      - name: Run load test
-        run: k6 run loadtest.js
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests & push metrics
+        run: |
+          start=$(date +%s)
+
+          set +e
+          npm test
+          test_exit_code=$?
+          set -e
+
+          end=$(date +%s)
+          duration=$((end - start))
+
+          if [ $test_exit_code -eq 0 ]; then
+            pipeline_status=1
+          else
+            pipeline_status=0
+          fi
+
+          cat <<EOF | curl --data-binary @- "$PUSHGATEWAY_URL/metrics/job/food_ordering_ci"
+          cicd_pipeline_last_status{pipeline="food_ordering_ci"} $pipeline_status
+          cicd_pipeline_duration_seconds{pipeline="food_ordering_ci"} $duration
+          EOF
+
+          exit $test_exit_code
