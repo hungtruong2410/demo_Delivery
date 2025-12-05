@@ -14,15 +14,6 @@ jobs:
       DD_SITE: "us5.datadoghq.com"
       DD_CIVISIBILITY_AGENTLESS_ENABLED: "true"
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
-        ports:
-          - 3306:3306
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,13 +27,12 @@ jobs:
         run: |
           npm ci
           npm install -g @datadog/datadog-ci
+          mkdir -p reports
 
-      - name: Run Jest tests and upload to Datadog
+      - name: Run Jest tests + generate JUnit
         run: |
-          # chạy test + xuất junit report
           npm test -- --reporters=default --reporters=jest-junit
 
-          # upload test report lên Datadog
-          datadog-ci junit upload \
-            --service food-ordering \
-            reports/junit.xml
+      - name: Upload results to Datadog
+        run: |
+          datadog-ci junit upload --service food-ordering reports/junit.xml
