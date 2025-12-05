@@ -67,3 +67,8 @@ jobs:
           nohup npm start >/tmp/server.log 2>&1 &
           sleep 10
           curl -I http://localhost:3000 || (cat /tmp/server.log && false)
+      - name: Send Pipeline Data to Datadog
+        uses: datadog/ci-visibility-github-action@v1
+        with:
+          api_key: ${{ secrets.DD_API_KEY }}
+          site: ${{ secrets.DD_SITE }}

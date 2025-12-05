@@ -23,3 +23,5 @@ jobs:
       - name: Run deployment script on Mac mini
         run: |
           ssh -o StrictHostKeyChecking=no -i deploy_key hungtruong@127.0.0.1 "bash ~/deploy_food_ordering.sh"
+
+     

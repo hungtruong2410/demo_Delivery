@@ -39,3 +39,8 @@ jobs:
         run: |
           echo "❗ SERVER LOG ❗"
           cat server.log
+      - name: Send Pipeline Data to Datadog
+        uses: datadog/ci-visibility-github-action@v1
+        with:
+          api_key: ${{ secrets.DD_API_KEY }}
+          site: ${{ secrets.DD_SITE }}
