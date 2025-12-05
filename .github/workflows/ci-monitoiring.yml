@@ -1,1 +1,25 @@
 
+name: CI - Monitoring
+
+on:
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -s https://api.github.com/repos/grafana/k6/releases/latest \
+          | grep "browser_download_url.*linux-amd64" \
+          | cut -d '"' -f 4 \
+          | wget -qi -
+          tar -xvf k6*.tar.gz
+          sudo mv k6-*/k6 /usr/local/bin/
+
+      - name: Run load test
+        run: k6 run loadtest.js

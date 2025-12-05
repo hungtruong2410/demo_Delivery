@@ -1,1 +1,37 @@
 
+name: CD - Deploy Docker
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Build & Push Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USER }}/foodapp:latest .
+          docker push ${{ secrets.DOCKER_USER }}/foodapp:latest
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USER }}/foodapp:latest
+            docker stop foodapp || true
+            docker rm foodapp || true
+            docker run -d -p 3000:3000 --name foodapp ${{ secrets.DOCKER_USER }}/foodapp:latest
