@@ -1,25 +1,30 @@
-name: CD - Deploy Docker
+name: CD - Deploy to Local Mac
 
 on:
   push:
     branches: [ "main" ]
+  # Chỉ chạy CD sau khi CI đã pass (tùy chọn, hiện tại cứ để chạy song song cũng được)
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # QUAN TRỌNG: Đổi từ 'ubuntu-latest' sang 'self-hosted'
+    # Lúc này GitHub sẽ tìm máy Mac của bạn để chạy lệnh
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        run: |
-          echo "${{ secrets.DEPLOY_PRIVATE_KEY }}" > deploy_key
-          chmod 600 deploy_key
-
+      # Vì code chạy ngay trên máy Mac của bạn rồi,
+      # nên không cần SSH gì cả. Gọi thẳng script deploy luôn!
       - name: Deploy to Mac Server
         run: |
-          ssh -o StrictHostKeyChecking=no \
-              -i deploy_key \
-              hungtruong@127.0.0.1 \
-              "bash ~/deploy_food_ordering.sh"
+          echo "🚀 Starting deployment on local Mac..."
+          
+          # Đảm bảo script có quyền thực thi
+          chmod +x ~/deploy_food_ordering.sh
+          
+          # Chạy script deploy
+          bash ~/deploy_food_ordering.sh
+          
+          echo "✅ Deployment finished!"
