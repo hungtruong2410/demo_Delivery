@@ -61,6 +61,9 @@ jobs:
           NODE_ENV=production
           EOF
 
+      - name: Run tests with Jest (Datadog-compatible)
+        run: npm test
+
       - name: Build & Run test server
         run: |
           nohup npm start >/tmp/server.log 2>&1 &
