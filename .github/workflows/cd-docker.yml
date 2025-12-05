@@ -1,0 +1,24 @@
+name: CD - Deploy Docker
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Build & Push Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USER }}/foodapp:latest .
+          docker push ${{ secrets.DOCKER_USER }}/foodapp:latest

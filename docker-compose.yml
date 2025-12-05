@@ -7,8 +7,7 @@ services:
       MYSQL_DATABASE: foodorderingwesitedb
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - foodnet
+    networks: [foodnet]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret"]
       interval: 5s
@@ -21,7 +20,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
     environment:
       NODE_ENV: production
       DB_HOST: db
@@ -35,40 +33,31 @@ services:
       - "3000:3000"
     volumes:
       - ./public/uploads:/app/public/uploads
-    networks:
-      - foodnet
+    networks: [foodnet]
 
   pushgateway:
     image: prom/pushgateway:latest
     restart: unless-stopped
     ports:
       - "9091:9091"
-    networks:
-      - foodnet
+    networks: [foodnet]
 
   prometheus:
     image: prom/prometheus:latest
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
     ports:
       - "9090:9090"
-    networks:
-      - foodnet
+    networks: [foodnet]
 
   grafana:
     image: grafana/grafana:latest
     ports:
       - "3001:3000"
-    depends_on:
-      - prometheus
-    networks:
-      - foodnet
+    depends_on: [prometheus]
     volumes:
       - grafana_data:/var/lib/grafana
-    dns:
-      - 8.8.8.8
+    networks: [foodnet]
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -79,36 +68,31 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - foodnet
+    networks: [foodnet]
 
   node_exporter:
     image: prom/node-exporter:latest
     ports:
       - "9100:9100"
-    networks:
-      - foodnet
+    networks: [foodnet]
 
   datadog:
-    image: gcr.io/datadoghq/agent:7
+    image: datadog/agent:latest
     container_name: datadog-agent
     restart: unless-stopped
     environment:
-      - DD_API_KEY=abc66a96001a84b0c4ac571bc32677de
-      - DD_SITE=us5.datadoghq.com
-      - DD_LOGS_ENABLED=true
-      - DD_CONTAINER_COLLECT_ALL=true
-      - DD_PROCESS_AGENT_ENABLED=true
-      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: us5.datadoghq.com
+      DD_LOGS_ENABLED: "true"
+      DD_CONTAINER_COLLECT_ALL: "true"
+      DD_PROCESS_AGENT_ENABLED: "true"
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    networks:
-      - foodnet
-    depends_on:
-      - app
+    networks: [foodnet]
 
 networks:
   foodnet:

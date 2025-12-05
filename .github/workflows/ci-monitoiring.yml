@@ -1,0 +1,45 @@
+name: CI with Monitoring
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    env:
+      PUSHGATEWAY_URL: http://127.0.0.1:9091
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests & push metrics
+        run: |
+          start=$(date +%s)
+
+          set +e
+          npm test
+          rc=$?
+          set -e
+
+          end=$(date +%s)
+          duration=$((end-start))
+          status=$([ $rc -eq 0 ] && echo 1 || echo 0)
+
+          cat <<EOF | curl --data-binary @- "$PUSHGATEWAY_URL/metrics/job/ci_pipeline"
+          cicd_last_status $status
+          cicd_duration_seconds $duration
+          EOF
+
+          exit $rc

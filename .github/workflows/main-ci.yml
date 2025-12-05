@@ -1,18 +1,27 @@
-name: CI - Node Tests with Datadog
+name: CI - Build & Test Node App
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      DD_API_KEY: ${{ secrets.DD_API_KEY }}
-      DD_SITE: "us5.datadoghq.com"
-      DD_CIVISIBILITY_AGENTLESS_ENABLED: "true"
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: foodorderingwesitedb
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -psecret"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout code
@@ -24,16 +33,24 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g @datadog/datadog-ci
-          mkdir -p reports
+        run: npm ci
 
-      - name: Run Jest tests (JUnit auto-generated)
-        run: npm test
+      - name: Import DB schema
+        run: mysql -h 127.0.0.1 -uroot -psecret foodorderingwesitedb < FoodOrderingWebsite.sql
 
-      - name: Upload JUnit results to Datadog
+      - name: Create .env
         run: |
-          datadog-ci junit upload \
-            --service food-ordering \
-            reports/junit.xml
+          cat > .env <<EOF
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_USER=root
+          DB_PASSWORD=secret
+          DB_NAME=foodorderingwesitedb
+          NODE_ENV=test
+          EOF
+
+      - name: Run test server
+        run: |
+          nohup npm start > server.log 2>&1 &
+          sleep 10
+          curl -I http://localhost:3000 || (cat server.log && false)
