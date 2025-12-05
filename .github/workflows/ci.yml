@@ -9,6 +9,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }}
+      DD_SITE: "us5.datadoghq.com"
+      DD_CIVISIBILITY_AGENTLESS_ENABLED: "true"
+
     services:
       mysql:
         image: mysql:8.0
@@ -26,52 +31,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install MySQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mysql-client
-
-      - name: Wait for MySQL
-        run: |
-          echo "⏳ Waiting for MySQL to be ready..."
-          for i in {1..60}; do
-            mysqladmin ping -h 127.0.0.1 -P 3306 -uroot -p${{ secrets.DB_PASSWORD }} --silent && break
-            sleep 2
-          done
-
-      - name: Import database schema
-        run: |
-          mysql -h 127.0.0.1 -P 3306 -uroot -p${{ secrets.DB_PASSWORD }} ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
-
-      - name: Create .env file
-        run: |
-          cat > .env <<EOF
-          DB_HOST=127.0.0.1
-          DB_PORT=${{ secrets.DB_PORT }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET }}
-          STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE }}
-          NODE_ENV=production
-          EOF
-
-      - name: Run tests with Jest (Datadog-compatible)
+      - name: Run Jest tests with Datadog CI Visibility
         run: npm test
-
-      - name: Build & Run test server
-        run: |
-          nohup npm start >/tmp/server.log 2>&1 &
-          sleep 10
-          curl -I http://localhost:3000 || (cat /tmp/server.log && false)
-
-      - name: Send Pipeline Data to Datadog
-        uses: DataDog/ci-visibility-github-action@v1.4.0
-        with:
-          api_key: ${{ secrets.DD_API_KEY }}
-          site: "us5.datadoghq.com"
