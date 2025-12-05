@@ -29,10 +29,12 @@ jobs:
           npm install -g @datadog/datadog-ci
           mkdir -p reports
 
-      - name: Run Jest tests + JUnit
+      - name: Run Jest tests (Jest will auto-generate JUnit)
         run: |
-          npm test -- --reporters=default --reporters=jest-junit
+          npm test
 
-      - name: Upload results to Datadog
+      - name: Upload JUnit results to Datadog
         run: |
-          datadog-ci junit upload --service food-ordering reports/junit.xml
+          datadog-ci junit upload \
+            --service food-ordering \
+            reports/junit.xml
