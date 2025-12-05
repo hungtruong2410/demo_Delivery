@@ -33,7 +33,16 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm install -g @datadog/datadog-ci
 
-      - name: Run Jest tests with Datadog CI Visibility
-        run: npm test
+      - name: Run Jest tests and upload to Datadog
+        run: |
+          # chạy test + xuất junit report
+          npm test -- --reporters=default --reporters=jest-junit
+
+          # upload test report lên Datadog
+          datadog-ci junit upload \
+            --service food-ordering \
+            reports/junit.xml
