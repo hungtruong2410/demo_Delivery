@@ -1,4 +1,4 @@
-name: CI Monitoring Metrics
+name: CI - Test & Push Metrics
 
 on:
   push:
@@ -8,9 +8,6 @@ jobs:
   build-and-monitor:
     runs-on: ubuntu-latest
 
-    env:
-      PUSHGATEWAY_URL: http://127.0.0.1:9091
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,32 +15,19 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Run tests & push metrics
+      - name: Run tests & generate junit.xml
+        run: npm test
+
+      - name: Upload JUnit Test Result to Datadog
         run: |
-          start=$(date +%s)
-
-          set +e
-          npm test
-          test_exit_code=$?
-          set -e
-
-          end=$(date +%s)
-          duration=$((end - start))
-
-          if [ $test_exit_code -eq 0 ]; then
-            pipeline_status=1
-          else
-            pipeline_status=0
-          fi
-
-          cat <<EOF | curl --data-binary @- "$PUSHGATEWAY_URL/metrics/job/food_ordering_ci"
-          cicd_pipeline_last_status{pipeline="food_ordering_ci"} $pipeline_status
-          cicd_pipeline_duration_seconds{pipeline="food_ordering_ci"} $duration
-          EOF
-
-          exit $test_exit_code
+          npx datadog-ci junit upload reports/junit.xml \
+            --service food-ordering \
+            --tags branch:${GITHUB_REF_NAME}
+        env:
+          DATADOG_API_KEY: ${{ secrets.DD_API_KEY }}
+          DATADOG_SITE: us5.datadoghq.com
