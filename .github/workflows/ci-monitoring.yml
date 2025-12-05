@@ -2,15 +2,12 @@ name: CI with Monitoring
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 jobs:
   build-and-test:
     runs-on: [self-hosted, macOS, ARM64]
-
-
-
 
     env:
       PUSHGATEWAY_URL: http://127.0.0.1:9091
@@ -22,7 +19,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
 
       - name: Install dependencies
         run: npm install
@@ -31,7 +28,6 @@ jobs:
         run: |
           start=$(date +%s)
 
-          # chạy test nhưng không kill job nếu fail để còn đẩy metrics
           set +e
           npm test
           test_exit_code=$?
@@ -50,16 +46,15 @@ jobs:
           echo "Pipeline status: $pipeline_status"
           echo "Duration: $duration seconds"
 
-          # Đẩy metrics lên Pushgateway
           cat <<EOF | curl --data-binary @- "$PUSHGATEWAY_URL/metrics/job/food_ordering_ci"
           cicd_pipeline_last_status{pipeline="food_ordering_ci"} $pipeline_status
           cicd_pipeline_duration_seconds{pipeline="food_ordering_ci"} $duration
           EOF
 
-          # Trả exit code về cho CI biết pass/fail
           exit $test_exit_code
+
       - name: Send Pipeline Data to Datadog
-        uses: DataDog/ci-visibility-github-action@v1
+        uses: DataDog/ci-visibility-github-action@v1.4.0
         with:
           api_key: ${{ secrets.DD_API_KEY }}
           site: "us5.datadoghq.com"

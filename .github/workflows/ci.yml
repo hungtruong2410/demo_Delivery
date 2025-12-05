@@ -2,12 +2,11 @@ name: CI - Build & Test Node App
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 jobs:
   build:
-    # CHỈ SỬA DÒNG NÀY
     runs-on: ubuntu-latest
 
     services:
@@ -27,7 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -67,8 +66,9 @@ jobs:
           nohup npm start >/tmp/server.log 2>&1 &
           sleep 10
           curl -I http://localhost:3000 || (cat /tmp/server.log && false)
+
       - name: Send Pipeline Data to Datadog
-        uses: DataDog/ci-visibility-github-action@v1
+        uses: DataDog/ci-visibility-github-action@v1.4.0
         with:
           api_key: ${{ secrets.DD_API_KEY }}
           site: "us5.datadoghq.com"

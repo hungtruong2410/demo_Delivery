@@ -2,7 +2,7 @@ name: CI - Node App + k6 Performance
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -27,20 +27,19 @@ jobs:
           sleep 5
 
       - name: Install k6
-        run: |
-          brew install k6
+        run: brew install k6
 
       - name: Run k6 performance test
-        run: |
-          k6 run loadtest.js
+        run: k6 run loadtest.js
 
       - name: Show server logs if test FAIL
         if: failure()
         run: |
           echo "❗ SERVER LOG ❗"
           cat server.log
+
       - name: Send Pipeline Data to Datadog
-        uses: DataDog/ci-visibility-github-action@v1
+        uses: DataDog/ci-visibility-github-action@v1.4.0
         with:
           api_key: ${{ secrets.DD_API_KEY }}
           site: "us5.datadoghq.com"
