@@ -1,25 +1,28 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 5s
 
 scrape_configs:
+  # Scrape chính Prometheus
   - job_name: 'prometheus'
     static_configs:
       - targets: ['prometheus:9090']
 
+  # cAdvisor (monitor CPU/RAM/I/O container)
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
 
+  # Node Exporter (monitor hệ thống Mac)
   - job_name: 'node_exporter'
     static_configs:
       - targets: ['node_exporter:9100']
       
+  # Node app (nếu bạn có route /metrics trong Express)
   - job_name: "node_app"
     static_configs:
       - targets: ["app:3000"]
 
-
-  # Nhận metrics từ CI/CD thông qua Pushgateway (phần 2)
+  # Pushgateway (CI/CD metrics)
   - job_name: 'pushgateway'
     honor_labels: true
     static_configs:

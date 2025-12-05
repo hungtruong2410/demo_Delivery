@@ -1,0 +1,29 @@
+groups:
+  - name: system-alerts
+    rules:
+      - alert: HighCPU
+        expr: node_cpu_seconds_total{mode="idle"} < 0.2
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          description: "CPU usage high on {{ $labels.instance }}"
+          summary: "High CPU"
+
+      - alert: HighMemory
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          description: "Low memory available"
+          summary: "Memory Usage Critical"
+
+      - alert: ContainerDown
+        expr: up{job="cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          description: "Docker container is down"
+          summary: "Container down"
