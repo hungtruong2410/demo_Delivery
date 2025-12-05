@@ -1,0 +1,114 @@
+name: CI/CD - Full Pipeline (Build, Test, Monitor)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  integration-pipeline:
+    runs-on: ubuntu-latest
+    
+    # 1. Dựng MySQL Service (Phần này bạn làm rất tốt)
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -p${{ secrets.DB_PASSWORD }}" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          # Cài thêm jest-junit nếu trong package.json chưa có
+          npm install jest-junit --no-save 
+
+      # 2. Chạy Unit Test & Upload Datadog (Lấy từ file cũ của bạn)
+      # Phần này test logic code, chưa cần DB thật
+      - name: Run Unit Tests
+        run: npx jest --reporters=default --reporters=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: "reports"
+          JEST_JUNIT_OUTPUT_NAME: "junit.xml"
+      
+      - name: Upload Test Report to Datadog
+        if: always() # Luôn chạy dù test fail
+        run: |
+          npx datadog-ci junit upload reports/junit.xml \
+            --service food-ordering \
+            --tags branch:${GITHUB_REF_NAME}
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: us5.datadoghq.com
+
+      # 3. Chuẩn bị DB để test chạy server thật (Integration Test)
+      - name: Wait for MySQL Ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -p${{ secrets.DB_PASSWORD }} --silent; then
+              echo "MySQL is up!"
+              break
+            fi
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+
+      - name: Import Database Schema
+        # Lưu ý: Đảm bảo file .sql nằm đúng ở thư mục gốc, nếu không phải sửa đường dẫn
+        run: |
+          sudo apt-get install -y mysql-client
+          mysql -h 127.0.0.1 -P 3306 -u root -p${{ secrets.DB_PASSWORD }} \
+            ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
+
+      # 4. Tạo file .env (Đã sửa lỗi format indentation)
+      - name: Create .env file
+        run: |
+          cat <<EOF > .env
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_USER=root
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET }}
+          STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE }}
+          NODE_ENV=production
+          EOF
+
+      # 5. Smoke Test: Thử bật server xem có crash không
+      - name: Start server and verify health
+        run: |
+          # Chạy server ở background
+          nohup npm start > server.log 2>&1 &
+          SERVER_PID=$!
+          
+          echo "Waiting for server to launch..."
+          sleep 15
+          
+          # Kiểm tra xem server có phản hồi HTTP 200/300 không
+          if curl --fail -I http://localhost:3000; then
+            echo "✅ Server started successfully!"
+          else
+            echo "❌ Server failed to start. Logs:"
+            cat server.log
+            exit 1
+          fi
+          
+          # Dọn dẹp process (optional)
+          kill $SERVER_PID
