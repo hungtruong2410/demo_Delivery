@@ -47,7 +47,9 @@ describe('Public routes', () => {
   // 1
   it('GET /healthz trả về 200 và "ok"', async () => {
     const res = await request(app).get('/healthz');
-    expect(res.statusCode).toBe(200);
+    //expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(500); // <-- SỬA SỐ 200 THÀNH 500
+    // Ý nghĩa: Em đang bắt server phải lỗi 500, nhưng server vẫn trả về 200 -> Test Fail
     expect(res.text).toBe('ok');
   });
 
