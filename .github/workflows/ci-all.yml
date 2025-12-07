@@ -1,4 +1,4 @@
-name: CI/CD - Full Pipeline (Build, Test, Monitor)
+name: CI - Full Pipeline (Build, Test, Monitor)
 
 on:
   push:
