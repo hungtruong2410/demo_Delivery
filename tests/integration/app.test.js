@@ -25,7 +25,7 @@ function createTestApp() {
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(cookieParser());
 
-  // mount routes giống app thực tế
+  // mount routes giống app thực tế tế
   app.use('/', indexRoutes);
   app.use('/', userRoutes);
   app.use('/admin', adminRoutes);
