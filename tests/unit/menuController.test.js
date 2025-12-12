@@ -76,4 +76,19 @@ describe('menuController.getFood', () => {
     expect(res.json).toHaveBeenCalledWith({ message: 'Food not found' });
     expect(next).not.toHaveBeenCalled();
   });
+
+  it('gọi next(err) khi Food.findById xảy ra lỗi', async () => {
+    const error = new Error('DB failure');
+    Food.findById = jest.fn().mockRejectedValue(error);
+
+    const req = { params: { id: '123' } };
+    const res = createRes();
+    const next = jest.fn();
+
+    await menuController.getFood(req, res, next);
+
+    expect(Food.findById).toHaveBeenCalledWith('123');
+    expect(next).toHaveBeenCalledWith(error);
+    expect(res.json).not.toHaveBeenCalled();
+  });
 });
