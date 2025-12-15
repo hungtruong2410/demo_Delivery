@@ -1,6 +1,7 @@
 services:
   db:
     image: mysql:8.0
+    platform: linux/amd64
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: secret
@@ -57,6 +58,8 @@ services:
     depends_on: [prometheus]
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana.ini:/etc/grafana/grafana.ini
+
     networks: [foodnet]
 
   cadvisor:

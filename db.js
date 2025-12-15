@@ -1,23 +1,28 @@
 require('dotenv').config();
 const mysql = require("mysql2");
 
-const connection = mysql.createConnection({
+// Dùng createPool thay vì createConnection
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: 3306
+  port: process.env.DB_PORT || 3306, // Nên thêm fallback port
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-// Chỉ connect khi KHÔNG phải môi trường test
+// Test kết nối
 if (process.env.NODE_ENV !== 'test') {
-  connection.connect((err) => {
+  pool.getConnection((err, connection) => {
     if (err) {
       console.error('LỖI KẾT NỐI DATABASE: ' + err.stack);
-      return;
+    } else {
+      console.log('Đã kết nối database thành công via Pool');
+      connection.release(); // Trả kết nối về pool ngay sau khi test
     }
-    console.log('Đã kết nối database (ID ' + connection.threadId + ')');
   });
 }
 
-module.exports = connection;
+module.exports = pool;

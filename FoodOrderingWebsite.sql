@@ -149,6 +149,14 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+CREATE TABLE `cart` (
+  `cart_id` int NOT NULL AUTO_INCREMENT,
+  `user_name` varchar(255) NOT NULL,  -- Lưu tên người dùng (khớp với session)
+  `item_id` int NOT NULL,             -- Mã món ăn
+  `quantity` int NOT NULL DEFAULT 1,  -- Số lượng
+  PRIMARY KEY (`cart_id`),
+  FOREIGN KEY (`item_id`) REFERENCES `menu` (`item_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 --
 -- Dumping data for table `users`
 --
