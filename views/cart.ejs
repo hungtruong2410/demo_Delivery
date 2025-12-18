@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Cart - Hungry To Eat</title>
+    
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.0/css/line.css">
     <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
     <link rel="stylesheet" href="/stylesheets/swiper-bundle.min.css">
@@ -13,274 +14,266 @@
     <link rel="stylesheet" href="/stylesheets/style.css">
 
     <style>
-        table,
-        th,
-        tr,
-        td {
-            border: 2px solid black;
-            padding: 8px 10px;
-            border-radius: 20px;
-        }
-
-        a {
-            color: white;
-        }
+        /* CSS cho bảng giỏ hàng đẹp hơn */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #eee; padding: 15px; text-align: center; vertical-align: middle; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .cart-empty-msg { text-align: center; padding: 60px; color: #777; }
+        .btn-delete { color: #ff4757; border: none; background: none; font-size: 1.2rem; cursor: pointer; transition: 0.2s; }
+        .btn-delete:hover { transform: scale(1.2); color: #d63031; }
+        .quantity-input { width: 60px; text-align: center; border: 1px solid #ddd; border-radius: 5px; padding: 5px; }
     </style>
-    <!-- ĐÃ BỎ Stripe script -->
 </head>
 
-<body class="body-fixed">
-<header class="site-header">
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-2">
-                <div class="header-logo">
-                    <a href="/homepage">
-                        <img src="/images/logo.png" width="160" height="36" alt="Logo">
-                    </a>
-                </div>
-            </div>
+<body>
 
-            <div class="col-lg-10">
-                <div class="main-navigation">
-                    <button class="menu-toggle"><span></span><span></span></button>
-                    <nav class="header-menu">
-                        <ul class="menu food-nav-menu">
-                            <li><a href="/homepage">Home</a></li>
-                            <li><a href="#about">About</a></li>
-                            <li><a href="#team">Our Team</a></li>
-                            <li><a href="#testimonials">Testimonials</a></li>
-                            <li><a href="#contact">Contact</a></li>
-                        </ul>
-                    </nav>
-                    <div class="header-right">
-                        <form action="#" class="header-search-form for-des">
-                            <input type="search" class="form-input" placeholder="Search Here...">
-                            <button type="submit">
-                                <i class="uil uil-search"></i>
-                            </button>
-                        </form>
-                        <a href="javascript:void(0)" class="header-btn header-cart">
-                            <i class="uil uil-shopping-bag"></i>
-                            <span class="cart-number" id="cart-number-count">
-                                <%= item_count %>
-                            </span>
+    <header class="site-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-2">
+                    <div class="header-logo">
+                        <a href="/homepage">
+                            <img src="/images/logo.png" width="160" height="36" alt="Logo">
                         </a>
-                        <div class="dropdown">
-                            <label>
-                                <button onclick="myFunction()" class="header-username"
-                                        style="color: #ff8243; padding: 4px 8px;">
-                                    <b><i><%= username %></i></b>
-                                </button>
-                            </label>
-                            <div id="myDropdown" class="dropdown-content">
-                                <a href="/myorders">My Orders</a>
-                                <a href="/settings">Settings</a>
-                                <a href="/logout">Sign Out</a>
+                    </div>
+                </div>
+                <div class="col-lg-10">
+                    <div class="main-navigation">
+                        <nav class="header-menu">
+                            <ul class="menu food-nav-menu">
+                                <li><a href="/homepage">Home</a></li>
+                                <li><a href="#about">About</a></li>
+                                <li><a href="#contact">Contact</a></li>
+                            </ul>
+                        </nav>
+                        <div class="header-right">
+                            <form action="/search" class="header-search-form for-des">
+                                <input type="search" name="q" class="form-input" placeholder="Tìm món ăn...">
+                                <button type="submit"><i class="uil uil-search"></i></button>
+                            </form>
+                            <a href="/cart" class="header-btn header-cart">
+                                <i class="uil uil-shopping-bag"></i>
+                                <span class="cart-number" id="cart-number-count">
+                                    <%= typeof item_count !== 'undefined' ? item_count : 0 %>
+                                </span>
+                            </a>
+                             <div class="dropdown">
+                                <a href="javascript:void(0)" class="header-username" style="color: #ff8243; font-weight:bold;">
+                                    <%= typeof username !== 'undefined' ? username : 'Guest' %>
+                                </a>
+                                <div class="dropdown-content">
+                                    <a href="/logout">Đăng xuất</a>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</header>
+    </header>
 
-<div id="viewport">
-    <div id="js-scroll-content">
-        <section class="about-sec section" id="cart" style="background-image: url(/images/menu-bg.png);">
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-12">
-                        <div class="sec-title text-center mb-5">
-                            <h2 class="h2-title">My Cart</h2>
-                            <div class="sec-title-shape mb-4">
-                                <img src="/images/title-shape.svg" alt="">
-                            </div>
+    <div id="viewport">
+        <div id="js-scroll-content">
+            <section class="about-sec section" id="cart" style="background-image: url(/images/menu-bg.png); min-height: 80vh;">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="sec-title text-center mb-5">
+                                <h2 class="h2-title">Giỏ hàng của tôi</h2>
+                                <div class="sec-title-shape mb-4">
+                                    <img src="/images/title-shape.svg" alt="">
+                                </div>
 
-                            <% let count = 0; %>
-                            <% let total_price = 0; %>
+                                <% if (!cartItems || cartItems.length === 0) { %>
+                                    <div class="cart-empty-msg">
+                                        <h3>Giỏ hàng đang trống trơn! 😢</h3>
+                                        <p>Bạn chưa chọn món ăn nào cả.</p>
+                                        <a href="/homepage" class="sec-btn" style="background: orange; margin-top: 20px; color: white;">Quay lại thực đơn</a>
+                                    </div>
+                                <% } else { %>
 
-                            <table id="mycart">
-                                <thead>
-                                <tr>
-                                    <th style="width: 5%;">S.No.:</th>
-                                    <th style="width: 10%;">Product</th>
-                                    <th style="width: 50%;">Product Name</th>
-                                    <th style="width: 10%;">Price</th>
-                                    <th style="width: 5%;">Quantity</th>
-                                    <th style="width: 20%;">SubTotal</th>
-                                </tr>
-                                </thead>
+                                    <div class="table-responsive bg-white p-4 rounded shadow-sm">
+                                        <table id="mycart">
+                                            <thead>
+                                                <tr>
+                                                    <th width="5%">STT</th>
+                                                    <th width="15%">Hình ảnh</th>
+                                                    <th width="35%">Tên món</th>
+                                                    <th width="15%">Đơn giá</th>
+                                                    <th width="10%">Số lượng</th>
+                                                    <th width="15%">Thành tiền</th>
+                                                    <th width="5%">Xóa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cart-table-body">
+                                                <% cartItems.forEach(function(item, index) { %>
+                                                    <tr data-menu-id="<%= item.item_id %>" data-cart-id="<%= item.cart_id %>">
+                                                        <td><%= index + 1 %></td>
+                                                        <td>
+                                                            <img src="/images/dish/<%= item.item_img %>" 
+                                                                 style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;">
+                                                        </td>
+                                                        <td style="text-align: left; padding-left: 20px;">
+                                                            <b><%= item.item_name %></b>
+                                                        </td>
+                                                        
+                                                        <td>₹ <span class="item-price"><%= item.item_price %></span></td>
+                                                        
+                                                        <td>
+                                                            <input type="number" 
+                                                                   class="quantity quantity-input" 
+                                                                   value="<%= item.quantity %>" 
+                                                                   min="1"
+                                                                   onchange="updateData(this.value, '<%= index %>')">
+                                                        </td>
+                                                        
+                                                        <td style="color: #27ae60; font-weight: bold;">
+                                                            ₹ <span class="price"><%= item.total_price %></span>
+                                                        </td>
+                                                        
+                                                        <td>
+                                                            <button class="btn-delete" onclick="deleteItem('<%= item.cart_id %>')" title="Xóa món này">
+                                                                <i class="uil uil-trash-alt"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                <% }); %>
+                                            </tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: right; font-weight: bold; padding-right: 20px;">TỔNG THANH TOÁN:</td>
+                                                    <td colspan="2" style="text-align: left;">
+                                                        <span id="total_price" style="color: red; font-size: 1.4rem; font-weight: bold;">
+                                                            ₹ <%= grandTotal %>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
 
-                                <tbody id="cart-table-body">
-                                <% for (let i = 0; i < items.length; i++) { %>
-                                    <tr data-item-id="<%= items[i].item_id %>">
-                                        <% count++ %>
-                                        <td><%= i + 1 %></td>
-                                        <td>
-                                            <img src="/images/dish/<%= items[i].item_img %>"
-                                                 alt=""
-                                                 style="border-radius: 10%; border: 2px solid rgb(68, 66, 66); box-shadow: 4px 4px 8px black;">
-                                        </td>
-                                        <td><%= items[i].item_name %></td>
-                                        <td>₹ <span class="item-price"><%= items[i].item_price %></span></td>
-                                        <td>
-                                            <input type="number"
-                                                   style="text-align: center;"
-                                                   placeholder="Qty"
-                                                   class="quantity form-input"
-                                                   id="quantity_<%= i %>"
-                                                   value="1"
-                                                   min="1"
-                                                   onchange="updateData(this.value,'<%= i %>');">
-                                        </td>
-                                        <td>₹ <span class="price"><%= items[i].item_price %></span></td>
-                                        <% total_price += items[i].item_price %>
-                                    </tr>
+                                    <br>
+                                    <button id="checkout-button" class="sec-btn" style="background: #27ae60; color: white; width: 250px; font-size: 18px;">
+                                        💳 THANH TOÁN NGAY
+                                    </button>
+
                                 <% } %>
-                                </tbody>
-
-                                <tfoot>
-                                <tr>
-                                    <td colspan="4"><strong>Total</strong></td>
-                                    <td id="total_quantity"><%= count %></td>
-                                    <span id="inital_quantity" style="display: hidden;" hidden><%= count %></span>
-                                    <td id="total_price">₹ <%= total_price %></td>
-                                    <span id="inital_price" style="display: hidden;" hidden><%= total_price %></span>
-                                </tr>
-                                </tfoot>
-                            </table>
+                            </div>
                         </div>
                     </div>
-
-                    <br><br>
-
-                    <button id="checkout-button" class="sec-btn"
-                            style="margin-left: 43%; width:20%; color: white; background: orange;">
-                        Thanh toán
-                    </button>
                 </div>
-            </div>
-        </section>
-
-        <footer class="site-footer" id="contact"></footer>
+            </section>
+            
+            <footer class="site-footer" id="contact">
+                </footer>
+        </div>
     </div>
-</div>
 
-<!-- Script cập nhật số lượng & tổng tiền -->
-<script>
-    function updateData(qty, i) {
-        // Đảm bảo số lượng là số dương
-        if (parseInt(qty) < 1) {
-            qty = 1;
-            document.getElementById('quantity_' + i).value = 1;
+    <script>
+        // 1. Cập nhật giá tiền khi đổi số lượng
+        function updateData(qty, index) {
+            if (parseInt(qty) < 1) return; // Không cho số lượng < 1
+            
+            const rows = document.querySelectorAll("#cart-table-body tr");
+            const row = rows[index];
+            const unitPrice = parseInt(row.querySelector(".item-price").innerText);
+            
+            // Tính lại thành tiền của dòng đó
+            const newSubTotal = parseInt(qty) * unitPrice;
+            row.querySelector(".price").innerText = newSubTotal;
+
+            // Tính lại Tổng tiền cả giỏ hàng
+            updateGrandTotal();
         }
 
-        // Updating Sub Price
-        const item_price = document.querySelectorAll(".item-price");
-        const newPrice = parseInt(qty) * parseInt(item_price[i].innerHTML);
-        document.querySelectorAll(".price")[i].innerHTML = newPrice;
-
-        // Updating Total Quantity
-        const quantity = document.querySelectorAll(".quantity");
-        let total_qty = 0;
-        for (let j = 0; j < quantity.length; j++) {
-            total_qty += parseInt(quantity[j].value);
-        }
-        document.getElementById("total_quantity").innerHTML = total_qty;
-
-        // Updating Total Price
-        const price = document.querySelectorAll(".price");
-        let total_price = 0;
-        for (let j = 0; j < price.length; j++) {
-            total_price += parseInt(price[j].innerHTML);
-        }
-        document.getElementById("total_price").innerHTML = "₹ " + total_price;
-    }
-</script>
-
-<!-- Script Thanh toán: GỬI CART LÊN SERVER, KHÔNG DÙNG STRIPE -->
-<script>
-    const checkoutButton = document.getElementById('checkout-button');
-
-    async function handleCheckout() {
-        // 1. Thu thập dữ liệu giỏ hàng từ DOM
-        const cartRows = document.querySelectorAll("#cart-table-body tr");
-        if (cartRows.length === 0) {
-            alert("Giỏ hàng của bạn đang rỗng.");
-            return;
-        }
-
-        const cartItems = [];
-        cartRows.forEach(row => {
-            const itemId = row.getAttribute('data-item-id');
-            const quantityInput = row.querySelector('.quantity');
-            const quantity = parseInt(quantityInput.value);
-
-            if (itemId && quantity > 0) {
-                cartItems.push({
-                    id: itemId,
-                    quantity: quantity
-                });
-            }
-        });
-
-        if (cartItems.length === 0) {
-            alert("Giỏ hàng không hợp lệ.");
-            return;
-        }
-
-        // 2. Gửi dữ liệu giỏ hàng lên server
-        try {
-            const response = await fetch('/create-checkout-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ cart: cartItems }),
+        function updateGrandTotal() {
+            let total = 0;
+            document.querySelectorAll(".price").forEach(span => {
+                total += parseInt(span.innerText);
             });
-
-            const data = await response.json();
-
-            if (!response.ok || !data.ok) {
-                alert(data.error || 'Đã xảy ra lỗi khi xử lý thanh toán. Vui lòng thử lại.');
-                return;
-            }
-
-            // 3. Redirect sang trang xác nhận
-            if (data.redirect) {
-                window.location.href = data.redirect;   // -> /confirmation
-            } else {
-                alert('Thanh toán thành công nhưng không nhận được URL chuyển trang.');
-            }
-        } catch (error) {
-            console.error('Lỗi:', error);
-            alert('Đã xảy ra lỗi khi xử lý thanh toán. Vui lòng thử lại.');
+            const totalEl = document.getElementById("total_price");
+            if(totalEl) totalEl.innerText = "₹ " + total;
         }
-    }
 
-    if (checkoutButton) {
-        checkoutButton.addEventListener('click', function (e) {
-            e.preventDefault();
-            handleCheckout();
-        });
-    }
-</script>
+        // 2. Hàm Xóa món ăn
+        function deleteItem(cartId) {
+            if(!confirm("Bạn chắc chắn muốn xóa món này khỏi giỏ?")) return;
 
-<script src="/javascripts/jquery-3.5.1.min.js"></script>
-<script src="/javascripts/bootstrap.min.js"></script>
-<script src="/javascripts/popper.min.js"></script>
-<script src="/javascripts/font-awesome.min.js"></script>
-<script src="/javascripts/swiper-bundle.min.js"></script>
-<script src="/javascripts/jquery.mixitup.min.js"></script>
-<script src="/javascripts/query.fancybox.min.js"></script>
-<script src="/javascripts/parallax.min.js"></script>
-<script src="/javascripts/gsap.min.js"></script>
-<script src="/javascripts/ScrollTrigger.min.js"></script>
-<script src="/javascripts/ScrollToPlugin.min.js"></script>
-<script src="/javascripts/smooth-scroll.js"></script>
-<script src="/javascripts/main.js"></script>
+            fetch('/delete-cart-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cart_id: cartId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    location.reload(); // Load lại trang ngay lập tức
+                } else {
+                    alert("Lỗi: " + (data.message || "Không thể xóa"));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Lỗi kết nối Server!");
+            });
+        }
+
+        // 3. Hàm Thanh Toán
+        const checkoutBtn = document.getElementById('checkout-button');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                
+                // Gom dữ liệu từ bảng
+                const cartItems = [];
+                document.querySelectorAll("#cart-table-body tr").forEach(row => {
+                    const itemId = row.getAttribute('data-menu-id'); // Lấy ID món ăn
+                    const quantity = row.querySelector('.quantity').value;
+                    
+                    if(itemId) {
+                        cartItems.push({ id: itemId, quantity: parseInt(quantity) });
+                    }
+                });
+
+                if(cartItems.length === 0) return alert("Giỏ hàng rỗng!");
+
+                // Gửi lên Server
+                try {
+                    checkoutBtn.innerText = "Đang xử lý...";
+                    const res = await fetch('/create-checkout-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cart: cartItems })
+                    });
+                    const data = await res.json();
+                    
+                    if(data.ok && data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        alert(data.error || "Thanh toán thất bại");
+                        checkoutBtn.innerText = "💳 THANH TOÁN NGAY";
+                    }
+                } catch (err) {
+                    alert("Lỗi kết nối Server");
+                    checkoutBtn.innerText = "💳 THANH TOÁN NGAY";
+                }
+            });
+        }
+    </script>
+
+    <script src="/javascripts/jquery-3.5.1.min.js"></script>
+    <script src="/javascripts/bootstrap.min.js"></script>
+    <script src="/javascripts/popper.min.js"></script>
+    <script src="/javascripts/font-awesome.min.js"></script>
+    <script src="/javascripts/swiper-bundle.min.js"></script>
+    <script src="/javascripts/jquery.mixitup.min.js"></script>
+    <script src="/javascripts/query.fancybox.min.js"></script>
+    <script src="/javascripts/parallax.min.js"></script>
+    <script src="/javascripts/gsap.min.js"></script>
+    <script src="/javascripts/ScrollTrigger.min.js"></script>
+    <script src="/javascripts/ScrollToPlugin.min.js"></script>
+    <script src="/javascripts/smooth-scroll.js"></script>
+    <script src="/javascripts/main.js"></script>
 
 </body>
 </html>

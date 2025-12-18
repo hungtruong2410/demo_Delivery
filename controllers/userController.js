@@ -3,13 +3,15 @@ require('dotenv').config();
 const connection = require('../db.js');
 const { v4: uuidv4 } = require('uuid');
 
-// ---------------------------------------------------------------
+// --- THÊM DÒNG NÀY ĐỂ GỌI MODEL GIỎ HÀNG ---
+const CartModel = require('../models/cartModel'); 
+// -------------------------------------------
 
-// --- Biến global cho giỏ hàng (giữ nguyên như code gốc) ---
+// --- Biến global cũ (Giữ nguyên để tránh lỗi các hàm legacy khác) ---
 let citems = [];
 let citemdetails = [];
 let item_in_cart = 0;
-// --------------------------------------------------------
+// -----------------------------------------------------------------
 
 // ========== Auth / Index ==========
 function renderIndexPage(req, res) { res.render("index"); }
@@ -18,7 +20,6 @@ function renderSignUpPage(req, res) { res.render("signup"); }
 function signUpUser(req, res) {
   const { name, address, email, mobile, password } = req.body;
 
-  // NOTE: Mật khẩu đang lưu plain text (khuyến nghị chuyển sang bcrypt sau)
   connection.query(
     "INSERT INTO users (user_name, user_address, user_email, user_password, user_mobileno) VALUES (?, ?, ?, ?, ?)",
     [name, address, email, password, mobile],
@@ -34,6 +35,7 @@ function signUpUser(req, res) {
 
 function renderSignInPage(req, res) { res.render("signin"); }
 
+// --- SỬA HÀM NÀY: LƯU SESSION ---
 function signInUser(req, res) {
   const { email, password } = req.body;
   connection.query(
@@ -44,15 +46,25 @@ function signInUser(req, res) {
         return res.render("signin");
       }
       const { user_id, user_name } = results[0];
+      
+      // 1. Lưu Cookie (Giữ nguyên cho code cũ)
       res.cookie("cookuid", user_id);
       res.cookie("cookuname", user_name);
       res.clearCookie("is_admin");
-      return res.redirect("/homepage");
+
+      // 2. Lưu Session (QUAN TRỌNG CHO GIỎ HÀNG MỚI)
+      req.session.username = user_name;
+      req.session.userId = user_id;
+
+      // 3. Lưu xong mới chuyển trang
+      req.session.save((err) => {
+          return res.redirect("/homepage");
+      });
     }
   );
 }
 
-// ========== Home / Cart ==========
+// ========== Home ==========
 function renderHomePage(req, res) {
   const userId = req.cookies.cookuid;
   const userName = req.cookies.cookuname;
@@ -77,27 +89,43 @@ function renderHomePage(req, res) {
   );
 }
 
-function renderCart(req, res) {
-  const userId = req.cookies.cookuid;
-  const userName = req.cookies.cookuname;
-  connection.query(
-    "SELECT user_id, user_name FROM users WHERE user_id = ? AND user_name = ?",
-    [userId, userName],
-    function (error, results) {
-      if (!error && results.length) {
-        // Inject Stripe publishable key into the view so client can call Stripe.js
-        return res.render("cart", {
-          username: userName,
-          userid: userId,
-          items: citemdetails,
-          item_count: item_in_cart,
-          stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
-        });
-      } else { return res.render("signin"); }
+// ========== Cart (ĐÃ SỬA LẠI HOÀN TOÀN) ==========
+async function renderCart(req, res) {
+  try {
+    // 1. Lấy user từ Session (Ưu tiên) hoặc Cookie
+    const userName = req.session.username || req.cookies.cookuname;
+    
+    // Nếu chưa đăng nhập -> về trang login
+    if (!userName) {
+      return res.redirect("/signin");
     }
-  );
+
+    // 2. Gọi Model lấy danh sách món ăn từ Database thật
+    const cartItems = await CartModel.getCartByUser(userName);
+
+    // 3. Tính tổng tiền
+    let grandTotal = 0;
+    cartItems.forEach(item => {
+        grandTotal += item.total_price;
+    });
+
+    // 4. Render ra giao diện
+    res.render("cart", {
+      username: userName,
+      cartItems: cartItems, // Truyền biến mới này sang EJS
+      grandTotal: grandTotal,
+      item_count: cartItems.length,
+      userid: req.session.userId || req.cookies.cookuid,
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
+    });
+
+  } catch (err) {
+    console.log("Lỗi Render Cart:", err);
+    res.status(500).send("Lỗi Server khi tải giỏ hàng");
+  }
 }
 
+// --- Các hàm cũ giữ nguyên để tránh lỗi route (UpdateCart cũ) ---
 function updateCart(req, res) {
   const cartItems = req.body.cart || [];
   const uniqueItems = [...new Set(cartItems)];
@@ -109,36 +137,22 @@ function getItemDetails(citems_ids, size) {
   citems = citems_ids;
   citemdetails = [];
   item_in_cart = 0;
-
   if (!Array.isArray(citems_ids) || citems_ids.length === 0) {
     item_in_cart = 0;
     return;
   }
-
   let itemsProcessed = 0;
   citems_ids.forEach((item) => {
-    connection.query(
-      "SELECT * FROM menu WHERE item_id = ?",
-      [item],
-      function (error, results_item) {
+    connection.query("SELECT * FROM menu WHERE item_id = ?", [item], function (error, results_item) {
         itemsProcessed++;
-        if (!error && results_item.length) {
-          citemdetails.push(results_item[0]);
-        }
-        if (itemsProcessed === citems_ids.length) {
-          item_in_cart = size;
-        }
+        if (!error && results_item.length) { citemdetails.push(results_item[0]); }
+        if (itemsProcessed === citems_ids.length) { item_in_cart = size; }
       }
     );
   });
 }
 
-// ========== Thanh toán (Stripe) ==========
-// Bước 1: Tạo checkout session
-// ========== Thanh toán (FAKE, không dùng Stripe) ==========
-// Bước 1: "Tạo" checkout session giả lập
-// ========== Thanh toán đơn giản (KHÔNG Stripe) ==========
-// Bấm Thanh Toán -> gửi cart lên -> tạo orders -> trả redirect '/confirmation'
+// ========== Thanh toán (Giữ nguyên logic cũ tạm thời) ==========
 async function createCheckoutSession(req, res) {
   try {
     const userId = req.cookies.cookuid;
@@ -148,7 +162,7 @@ async function createCheckoutSession(req, res) {
       return res.status(401).json({ error: 'Bạn cần đăng nhập trước khi thanh toán.' });
     }
 
-    const cart = req.body.cart || [];       // [{ id, quantity }]
+    const cart = req.body.cart || []; 
     if (!Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ error: 'Giỏ hàng rỗng.' });
     }
@@ -179,24 +193,16 @@ async function createCheckoutSession(req, res) {
           [uuidv4(), userId, item.item_id, quantity, price * quantity, currDate],
           function (errInsert) {
             itemsProcessed++;
-            if (errInsert) {
-              hadError = true;
-              console.log(errInsert);
-            }
+            if (errInsert) { hadError = true; console.log(errInsert); }
 
             if (itemsProcessed === itemsFromDB.length) {
               if (hadError) {
-                return res
-                  .status(500)
-                  .json({ error: 'Có lỗi khi lưu đơn hàng. Vui lòng thử lại.' });
+                return res.status(500).json({ error: 'Có lỗi khi lưu đơn hàng.' });
               }
-
-              // Clear giỏ trong server
+              // Clear giỏ ảo cũ
               citems = [];
               citemdetails = [];
               item_in_cart = 0;
-
-              // OK -> client redirect sang trang xác nhận
               return res.json({ ok: true, redirect: '/confirmation' });
             }
           }
@@ -208,7 +214,7 @@ async function createCheckoutSession(req, res) {
     return res.status(500).json({ error: 'Lỗi server khi xử lý thanh toán.' });
   }
 }
-// Bước 3: Hủy thanh toán
+
 function paymentCancel(req, res) { return res.redirect("/cart"); }
 
 // ========== Pages khác ==========
@@ -286,11 +292,7 @@ function updateAddress(req, res) {
           [address, userId],
           function (err2) {
             if (!err2) {
-              return res.render("settings", {
-                username: userName,
-                userid: userId,
-                item_count: item_in_cart,
-              });
+              return res.render("settings", { username: userName, userid: userId, item_count: item_in_cart });
             }
             return res.status(500).render("signin");
           }
@@ -314,11 +316,7 @@ function updateContact(req, res) {
           [mobileno, userId],
           function (err2) {
             if (!err2) {
-              return res.render("settings", {
-                username: userName,
-                userid: userId,
-                item_count: item_in_cart,
-              });
+              return res.render("settings", { username: userName, userid: userId, item_count: item_in_cart });
             }
             return res.status(500).render("signin");
           }
@@ -343,11 +341,7 @@ function updatePassword(req, res) {
           [newPassword, userId],
           function (err2) {
             if (!err2) {
-              return res.render("settings", {
-                username: userName,
-                userid: userId,
-                item_count: item_in_cart,
-              });
+              return res.render("settings", { username: userName, userid: userId, item_count: item_in_cart });
             }
             return res.status(500).render("signin");
           }
@@ -356,12 +350,30 @@ function updatePassword(req, res) {
     }
   );
 }
-
+// --- HÀM MỚI: Xoá món ăn ---
+async function deleteCartItem(req, res) {
+    try {
+        const { cart_id } = req.body;
+        console.log("Đang xoá cart_id:", cart_id);
+        
+        await CartModel.deleteFromCart(cart_id);
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: "Lỗi xoá món" });
+    }
+}
+// --- SỬA HÀM NÀY: DELETE SESSION ---
 function logout(req, res) {
   res.clearCookie("cookuid");
   res.clearCookie("cookuname");
   res.clearCookie("is_admin");
-  return res.redirect("/signin");
+  
+  // Hủy Session
+  req.session.destroy((err) => {
+      return res.redirect("/signin");
+  });
 }
 
 // ====== Export ======
@@ -382,5 +394,6 @@ module.exports = {
   updateAddress,
   updateContact,
   updatePassword,
+  deleteCartItem,
   logout
 };

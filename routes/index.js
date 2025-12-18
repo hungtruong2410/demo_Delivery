@@ -17,5 +17,6 @@ router.get("/search", searchController.search);
 // 4. ROUTE THÊM VÀO GIỎ HÀNG (Để nút dấu cộng hoạt động)
 // Lưu ý: Đảm bảo trong searchController.js bạn đã viết hàm addToCart nhé
 router.post("/add-to-cart", searchController.addToCart);
-
+//Xoá sản phẩm
+router.post('/delete-cart-item', userController.deleteCartItem);
 module.exports = router;

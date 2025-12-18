@@ -68,7 +68,6 @@
 
 <body>
 
-    <!-- HOME BUTTON -->
     <a href="/homepage" class="btn-home">🏠 Trang chủ</a>
 
     <div class="title">Kết quả tìm kiếm cho: "<%= keyword %>"</div>
@@ -90,13 +89,11 @@
                     <h3><%= p.item_name %></h3>
                     <p><%= p.item_price %> VND</p>
 
-                    <!-- ADD TO CART -->
                     <button class="btn btn-primary js-add-to-cart"
                         data-id="<%= p.item_id %>">
                         + Thêm vào giỏ
                     </button>
 
-                    <!-- PAY NOW -->
                     <button class="btn btn-pay"
                         onclick='payNow(<%= p.item_id %>)'>
                         💳 Thanh toán ngay
@@ -110,10 +107,12 @@
 
     <% } %>
 
-    <!-- SCRIPT -->
     <script>
         // ADD TO CART FUNCTION
         function addToCart(id) {
+            // Hiệu ứng UX: Báo đang xử lý
+            console.log("Đang gửi yêu cầu thêm vào giỏ...");
+
             fetch("/add-to-cart", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -121,9 +120,18 @@
             })
             .then(res => res.json())
             .then(data => {
-                alert("Đã thêm vào giỏ hàng!");
+                // --- QUAN TRỌNG: Kiểm tra server trả về success hay không ---
+                if (data.success) {
+                    alert("✅ " + data.message);
+                } else {
+                    // Nếu lỗi (ví dụ: chưa đăng nhập), nó sẽ báo ở đây
+                    alert("❌ Lỗi: " + data.message);
+                }
             })
-            .catch(err => console.error("Lỗi:", err));
+            .catch(err => {
+                console.error("Lỗi:", err);
+                alert("⚠️ Lỗi kết nối Server! (Xem Console)");
+            });
         }
 
         // EVENT LISTENER

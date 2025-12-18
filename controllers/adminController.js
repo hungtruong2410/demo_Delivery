@@ -170,11 +170,15 @@ exports.renderViewDispatchOrdersPage = async (req, res) => {
 };
 
 // Dispatch: MOVE orders -> order_dispatch (đúng schema SQL)
+// Dispatch: MOVE orders -> order_dispatch (ĐÃ SỬA LỖI TRANSACTION)
 exports.dispatchOrders = async (req, res) => {
-  const conn = db.promise();
+  let conn; // Khai báo biến kết nối
 
   try {
-    // Hứng đủ các kiểu form field có thể gửi lên
+    // 1. QUAN TRỌNG: Phải xin cấp 1 kết nối riêng từ Pool
+    conn = await db.promise().getConnection(); 
+
+    // Hứng dữ liệu ID gửi lên
     const raw =
       req.body.orderIds ??
       req.body.ids ??
@@ -184,17 +188,19 @@ exports.dispatchOrders = async (req, res) => {
       req.body['ids[]'] ??
       req.body['orderId[]'];
 
-    // Chuẩn hóa thành mảng id string
+    // Chuẩn hóa ID
     let ids = Array.isArray(raw) ? raw : (raw ? [raw] : []);
     ids = [...new Set(ids.map(String).filter(Boolean))];
 
     if (!ids.length) {
+      conn.release(); // Trả kết nối nếu không làm gì
       return res.status(400).json({ ok: false, moved: 0, error: 'No order IDs' });
     }
 
+    // 2. Bắt đầu giao dịch trên kết nối riêng này
     await conn.beginTransaction();
 
-    // 1) Insert sang order_dispatch
+    // 3. Insert sang order_dispatch
     const insertSql = `
       INSERT INTO order_dispatch (order_id, user_id, item_id, quantity, price, datetime)
       SELECT order_id,      user_id,  item_id,  quantity,  price,  datetime
@@ -203,19 +209,31 @@ exports.dispatchOrders = async (req, res) => {
     `;
     const [ins] = await conn.query(insertSql, [ids]);
 
-    // 2) Xóa khỏi orders
+    // 4. Xóa khỏi orders
     const [del] = await conn.query(`DELETE FROM orders WHERE order_id IN (?)`, [ids]);
 
     const moved = del.affectedRows || ins.affectedRows || 0;
+    
     if (!moved) {
-      await conn.rollback();
+      await conn.rollback(); // Hoàn tác nếu không có gì thay đổi
+      conn.release();        // Trả kết nối
       return res.status(409).json({ ok: false, moved: 0, error: 'No matching orders to move' });
     }
 
+    // 5. Chốt đơn (Commit)
     await conn.commit();
+    
+    // 6. Trả kết nối về bể (RẤT QUAN TRỌNG)
+    conn.release();
+
     return res.json({ ok: true, moved, mode: 'move' });
+
   } catch (err) {
-    try { await conn.rollback(); } catch (_) {}
+    // Nếu lỗi: Hoàn tác và Trả kết nối
+    if (conn) {
+        try { await conn.rollback(); } catch (_) {}
+        conn.release();
+    }
     console.error('[DISPATCH_ERROR]', err);
     return res.status(500).json({ ok: false, moved: 0, error: err.message || 'Server error' });
   }
