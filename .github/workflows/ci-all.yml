@@ -9,7 +9,7 @@ jobs:
   integration-pipeline:
     runs-on: ubuntu-latest
 
-    # 1. BIẾN MÔI TRƯỜNG TOÀN CỤC (Quan trọng: Để mọi bước đều đọc được DB)
+    # 1. BIẾN MÔI TRƯỜNG TOÀN CỤC
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
@@ -19,7 +19,7 @@ jobs:
       NODE_ENV: test
       mysql_host: 127.0.0.1 
 
-    # 2. Dựng MySQL Service (Dùng bản 5.7 để ổn định nhất, tránh lỗi plugin auth)
+    # 2. Dựng MySQL Service (Bản 5.7 ổn định)
     services:
       mysql:
         image: mysql:5.7
@@ -28,7 +28,6 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.DB_NAME }}
         ports:
           - 3306:3306
-        # Options đơn giản để không làm crash container
         options: >-
           --health-cmd="mysqladmin ping" 
           --health-interval=10s 
@@ -48,10 +47,9 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Cài thêm các gói cần thiết cho CI
           npm install jest-junit cross-env --no-save 
 
-      # 3. Chờ MySQL khởi động xong
+      # 3. Chờ MySQL
       - name: Wait for MySQL Ready
         run: |
           for i in {1..30}; do
@@ -63,21 +61,23 @@ jobs:
             sleep 2
           done
 
-      # 4. Import Database (ĐÃ SỬA ĐƯỜNG DẪN FILE SQL)
+      # 4. Import Database (ĐÃ THÊM LỆNH SED SỬA LỖI COLLATION)
       - name: Import Database Schema
         run: |
           sudo apt-get install -y mysql-client
-          # Đã bỏ chữ 'database/' đi vì file nằm ở root
+          # Fix lỗi collation version 8.0 -> 5.7
+          sed -i 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' FoodOrderingWebsite.sql
+          
           mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
 
-      # 5. Chạy Test (Unit & Integration)
+      # 5. Chạy Test
       - name: Run Tests
         run: npx jest --reporters=default --reporters=jest-junit --detectOpenHandles
         env:
           JEST_JUNIT_OUTPUT_DIR: "reports"
           JEST_JUNIT_OUTPUT_NAME: "junit.xml"
       
-      # 6. Upload báo cáo lên Datadog
+      # 6. Upload Datadog
       - name: Upload Test Report to Datadog
         if: always() 
         run: |
@@ -88,17 +88,13 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DD_SITE: us5.datadoghq.com
 
-      # 7. Smoke Test (Khởi động server thật để kiểm tra)
+      # 7. Smoke Test
       - name: Start server and verify health
         run: |
-          # Chạy server ở background
           nohup npm start > server.log 2>&1 &
           SERVER_PID=$!
-          
           echo "Waiting for server to launch..."
           sleep 10
-          
-          # Kiểm tra server sống hay chết
           if curl --fail -I http://localhost:3000; then
             echo "✅ Server started successfully!"
           else
@@ -106,5 +102,4 @@ jobs:
             cat server.log
             exit 1
           fi
-          
           kill $SERVER_PID
