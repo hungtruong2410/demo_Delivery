@@ -8,8 +8,21 @@ on:
 jobs:
   integration-pipeline:
     runs-on: ubuntu-latest
-    
-    # 1. Dựng MySQL Service
+
+    # 1. KHAI BÁO BIẾN MÔI TRƯỜNG TOÀN CỤC (QUAN TRỌNG NHẤT)
+    # Khai báo ở đây thì TẤT CẢ các bước (Test, Start Server,...) đều tự nhận được.
+    # Không cần tạo file .env thủ công nữa.
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }} # Lấy từ Secret
+      DB_NAME: ${{ secrets.DB_NAME }}
+      NODE_ENV: test
+      # Biến này giúp fix lỗi connect localhost trên một số runner
+      mysql_host: 127.0.0.1 
+
+    # 2. Dựng MySQL Service (Đã thêm fix lỗi auth plugin)
     services:
       mysql:
         image: mysql:8.0
@@ -18,8 +31,13 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.DB_NAME }}
         ports:
           - 3306:3306
-        # ĐÃ XÓA PHẦN OPTIONS (HEALTH CHECK) ĐỂ TRÁNH LỖI PARSE SECRETS
-        # Chúng ta sẽ dùng bước "Wait for MySQL Ready" ở dưới để thay thế.
+        # DÒNG DƯỚI ĐÂY LÀ CHÌA KHÓA ĐỂ KHÔNG BỊ LỖI 'CESU8' HAY 'HANDSHAKE'
+        options: >-
+          --health-cmd="mysqladmin ping" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=3 
+          --entrypoint sh mysql:8.0 -c "exec docker-entrypoint.sh mysqld --default-authentication-plugin=mysql_native_password"
 
     steps:
       - name: Checkout code
@@ -34,59 +52,49 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Cài thêm jest-junit nếu trong package.json chưa có để xuất report
-          npm install jest-junit --no-save 
+          # Cài thêm các gói cần thiết nếu thiếu
+          npm install jest-junit cross-env --no-save 
 
-      # 2. Chạy Unit Test & Upload Datadog
-      - name: Run Unit Tests
-        run: npx jest --reporters=default --reporters=jest-junit
-        env:
-          JEST_JUNIT_OUTPUT_DIR: "reports"
-          JEST_JUNIT_OUTPUT_NAME: "junit.xml"
-      
-      - name: Upload Test Report to Datadog
-        if: always() # Luôn chạy bước này dù test fail để báo cáo lỗi
-        run: |
-          npx datadog-ci junit upload reports/junit.xml \
-            --service food-ordering \
-            --tags branch:${GITHUB_REF_NAME}
-        env:
-          DD_API_KEY: ${{ secrets.DD_API_KEY }}
-          DD_SITE: us5.datadoghq.com
-
-      # 3. Chuẩn bị DB để test chạy server thật (Integration Test)
+      # 3. Chờ MySQL thực sự sẵn sàng
       - name: Wait for MySQL Ready
         run: |
-          # Chờ MySQL khởi động (thay thế cho health check ở trên)
           for i in {1..30}; do
             if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" --silent; then
-              echo "MySQL is up!"
+              echo "✅ MySQL is up!"
               break
             fi
             echo "Waiting for MySQL..."
             sleep 2
           done
 
+      # 4. Import Database (Chạy trước khi Test)
       - name: Import Database Schema
-        # Lưu ý: Đảm bảo file .sql nằm đúng ở thư mục gốc, nếu không phải sửa đường dẫn
         run: |
           sudo apt-get install -y mysql-client
-          mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" \
-            ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
+          # Lưu ý: Kiểm tra kỹ xem file .sql nằm ở root hay trong thư mục database/
+          # Nếu file nằm trong folder database, sửa dòng dưới thành: < database/FoodOrderingWebsite.sql
+          mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" ${{ secrets.DB_NAME }} < database/FoodOrderingWebsite.sql
 
-      # 4. Tạo file .env (Dùng printf để đảm bảo không lỗi format)
-      - name: Create .env file
+      # 5. Chạy Test (Unit & Integration)
+      # Vì đã có env ở trên cùng, lệnh này sẽ tự động đọc được user/pass DB
+      - name: Run Tests
+        run: npx jest --reporters=default --reporters=jest-junit --detectOpenHandles
+        env:
+          JEST_JUNIT_OUTPUT_DIR: "reports"
+          JEST_JUNIT_OUTPUT_NAME: "junit.xml"
+      
+      # 6. Upload Datadog (Đã sửa tên gói chính xác)
+      - name: Upload Test Report to Datadog
+        if: always() 
         run: |
-          printf "DB_HOST=127.0.0.1\n" > .env
-          printf "DB_PORT=3306\n" >> .env
-          printf "DB_USER=root\n" >> .env
-          printf "DB_PASSWORD=${{ secrets.DB_PASSWORD }}\n" >> .env
-          printf "DB_NAME=${{ secrets.DB_NAME }}\n" >> .env
-          printf "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET }}\n" >> .env
-          printf "STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE }}\n" >> .env
-          printf "NODE_ENV=production\n" >> .env
+          npx @datadog/datadog-ci junit upload reports/junit.xml \
+            --service food-ordering \
+            --tags branch:${GITHUB_REF_NAME}
+        env:
+          DD_API_KEY: ${{ secrets.DD_API_KEY }}
+          DD_SITE: us5.datadoghq.com
 
-      # 5. Smoke Test: Thử bật server xem có crash không
+      # 7. Smoke Test (Khởi động server thật)
       - name: Start server and verify health
         run: |
           # Chạy server ở background
@@ -94,9 +102,9 @@ jobs:
           SERVER_PID=$!
           
           echo "Waiting for server to launch..."
-          sleep 15
+          sleep 10
           
-          # Kiểm tra xem server có phản hồi HTTP 200/300 không
+          # Kiểm tra server sống hay chết
           if curl --fail -I http://localhost:3000; then
             echo "✅ Server started successfully!"
           else
@@ -105,5 +113,4 @@ jobs:
             exit 1
           fi
           
-          # Dọn dẹp process
           kill $SERVER_PID
