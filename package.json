@@ -1,12 +1,31 @@
 {
   "name": "food-ordering-website",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "test": "DD_CIVISIBILITY_AGENTLESS_ENABLED=true DD_API_KEY=$DD_API_KEY DD_SITE=us5.datadoghq.com datadog-ci junit upload --service food-ordering --tags branch:$GITHUB_REF_NAME --results ./reports/junit.xml && jest --reporters=default --reporters=jest-junit",
-    "test:unit": "NODE_ENV=test jest tests/unit --ci --reporters=default --reporters=jest-junit",
-    "test:integration": "NODE_ENV=test jest tests/integration --ci --reporters=default --reporters=jest-junit"
+    
+    "// --- TEST SUITES (CÁC BỘ TEST) ---": "",
+    "test": "cross-env NODE_ENV=test jest",
+    
+    "// 1. UNIT TEST (Kiểm tra hàm nhỏ & logic nội bộ)": "",
+    "test:unit": "cross-env NODE_ENV=test jest tests/unit --reporters=default --reporters=jest-junit",
+    
+    "// 2. API TEST (Kiểm tra tích hợp API - Integration)": "",
+    "test:integration": "cross-env NODE_ENV=test jest tests/integration --reporters=default --reporters=jest-junit",
+    "test:api": "npm run test:integration",
+    
+    "// 3. PERFORMANCE TEST (Kiểm tra hiệu suất tải - k6)": "",
+    "test:performance": "k6 run loadtest.js",
+    
+    "// 4. SECURITY TEST (Kiểm tra lỗ hổng bảo mật package)": "",
+    "test:security": "npm audit --audit-level=moderate",
+
+    "// 5. DATA TEST (Kiểm tra kết nối & dữ liệu MySQL)": "",
+    "test:data": "cross-env NODE_ENV=test jest tests/integration/database.test.js",
+    
+    "// CI/CD PIPELINE": "",
+    "test:ci": "cross-env DD_CIVISIBILITY_AGENTLESS_ENABLED=true DD_API_KEY=$DD_API_KEY DD_SITE=us5.datadoghq.com datadog-ci junit upload --service food-ordering --tags branch:$GITHUB_REF_NAME --results ./reports/junit.xml && cross-env NODE_ENV=test jest --ci --reporters=default --reporters=jest-junit"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -18,6 +37,7 @@
     "ejs": "~2.6.1",
     "express": "~4.16.1",
     "express-fileupload": "^1.4.0",
+    "express-session": "^1.18.2",
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
     "mysql": "^2.18.1",
@@ -29,6 +49,7 @@
   },
   "devDependencies": {
     "@datadog/datadog-ci": "^4.3.0",
+    "cross-env": "^10.1.0",
     "jest": "^29.7.0",
     "jest-junit": "^16.0.0",
     "supertest": "^7.1.4"
@@ -37,7 +58,8 @@
     "testEnvironment": "node",
     "testMatch": [
       "**/tests/**/*.test.js"
-    ]
+    ],
+    "setupFilesAfterEnv": []
   },
   "jest-junit": {
     "outputDirectory": "reports",
