@@ -1,6 +1,6 @@
 const request = require("supertest");
 const app = require("../../app");
-const db = require("../../../db");
+const db = require("../../db");
 
 describe("AUTH INTEGRATION TEST", () => {
   const testUser = {

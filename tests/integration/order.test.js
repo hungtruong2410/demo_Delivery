@@ -1,6 +1,6 @@
 const request = require("supertest");
 const app = require("../../app");
-const db = require("../../../db");
+const db = require("../../db");
 
 let agent = request.agent(app);
 let userId;
