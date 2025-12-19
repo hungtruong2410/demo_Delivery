@@ -33,7 +33,6 @@
     "express-session": "^1.18.2",
     "http-errors": "~1.6.3",
     "morgan": "~1.9.1",
-    "mysql": "^2.18.1",
     "mysql2": "^3.16.0",
     "nodemon": "^2.0.16",
     "prom-client": "^15.1.3",
