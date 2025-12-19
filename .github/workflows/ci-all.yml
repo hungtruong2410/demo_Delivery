@@ -9,7 +9,7 @@ jobs:
   integration-pipeline:
     runs-on: ubuntu-latest
 
-    # 1. BIẾN MÔI TRƯỜNG TOÀN CỤC (Để tất cả các bước đều nhận được)
+    # 1. BIẾN MÔI TRƯỜNG TOÀN CỤC (Quan trọng: Để mọi bước đều đọc được DB)
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
@@ -17,10 +17,9 @@ jobs:
       DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
       DB_NAME: ${{ secrets.DB_NAME }}
       NODE_ENV: test
-      # Biến này giúp fix lỗi connect localhost trên một số runner
       mysql_host: 127.0.0.1 
 
-    # 2. Dựng MySQL Service (Dùng bản 5.7 để ổn định nhất)
+    # 2. Dựng MySQL Service (Dùng bản 5.7 để ổn định nhất, tránh lỗi plugin auth)
     services:
       mysql:
         image: mysql:5.7
@@ -29,7 +28,7 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.DB_NAME }}
         ports:
           - 3306:3306
-        # Options đơn giản chỉ để Health Check (Không gây crash)
+        # Options đơn giản để không làm crash container
         options: >-
           --health-cmd="mysqladmin ping" 
           --health-interval=10s 
@@ -49,10 +48,10 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Cài thêm các gói cần thiết nếu thiếu
+          # Cài thêm các gói cần thiết cho CI
           npm install jest-junit cross-env --no-save 
 
-      # 3. Chờ MySQL thực sự sẵn sàng
+      # 3. Chờ MySQL khởi động xong
       - name: Wait for MySQL Ready
         run: |
           for i in {1..30}; do
@@ -64,12 +63,12 @@ jobs:
             sleep 2
           done
 
-      # 4. Import Database (Chạy trước khi Test)
+      # 4. Import Database (ĐÃ SỬA ĐƯỜNG DẪN FILE SQL)
       - name: Import Database Schema
         run: |
           sudo apt-get install -y mysql-client
-          # Kiểm tra file .sql, nếu nằm trong thư mục database/ thì sửa đường dẫn bên dưới
-          mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" ${{ secrets.DB_NAME }} < database/FoodOrderingWebsite.sql
+          # Đã bỏ chữ 'database/' đi vì file nằm ở root
+          mysql -h 127.0.0.1 -P 3306 -u root -p"${{ secrets.DB_PASSWORD }}" ${{ secrets.DB_NAME }} < FoodOrderingWebsite.sql
 
       # 5. Chạy Test (Unit & Integration)
       - name: Run Tests
@@ -78,7 +77,7 @@ jobs:
           JEST_JUNIT_OUTPUT_DIR: "reports"
           JEST_JUNIT_OUTPUT_NAME: "junit.xml"
       
-      # 6. Upload Datadog (Đã sửa tên gói chính xác)
+      # 6. Upload báo cáo lên Datadog
       - name: Upload Test Report to Datadog
         if: always() 
         run: |
@@ -89,7 +88,7 @@ jobs:
           DD_API_KEY: ${{ secrets.DD_API_KEY }}
           DD_SITE: us5.datadoghq.com
 
-      # 7. Smoke Test (Khởi động server thật)
+      # 7. Smoke Test (Khởi động server thật để kiểm tra)
       - name: Start server and verify health
         run: |
           # Chạy server ở background
